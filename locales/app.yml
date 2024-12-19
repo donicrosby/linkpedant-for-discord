@@ -1,0 +1,9 @@
+_version: 2
+help.description:
+  en: "Helpful information from LinkPedant!"
+help.content:
+  en: "LinkPedant works automatically! Invite the bot to your server, make sure it has permission to read and send messages, and it will automatically respond with fixed links for you!"
+invite.description:
+  en: "Invite LinkPedant to your server!"
+invite.content:
+  en: "You can use this link to add LinkPedant to your server:\n%{invite_url}"

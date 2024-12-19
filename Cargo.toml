@@ -1,0 +1,19 @@
+[package]
+name = "linkpedant-for-discord"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "linkpedant"
+path = "src/lib.rs"
+
+[dependencies]
+config = "0.15"
+tokio = { version = "1", features = ["full"] }
+thiserror = "2"
+serenity = { version = "0.12", features = ["client", "gateway", "builder", "framework", "interactions_endpoint"] }
+serenity-commands = "0.5"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+rust-i18n = "3"
+serde = { version = "1", features = ["derive"]}
