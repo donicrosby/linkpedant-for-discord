@@ -4,15 +4,21 @@ use thiserror::Error;
 
 pub(crate) use client::Handler;
 pub(crate) use commands::LinkPedantCommands;
-pub use config::{get_configuration, Config};
+pub use config::{get_configuration, Config, LinkReplacerConfig, ReplacerConfig};
 use tracing::{error, warn};
 
 mod client;
 mod commands;
 mod config;
+mod replace;
 mod util;
 
 rust_i18n::i18n!("locales");
+
+#[cfg(test)]
+pub(crate) use util::init_tests;
+
+pub use util::{get_subscriber, init_subscriber};
 
 pub type Result<T> = ::core::result::Result<T, LinkPedantError>;
 
