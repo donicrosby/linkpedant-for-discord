@@ -1,11 +1,14 @@
 use rust_i18n;
 use serenity::{all::GatewayIntents, Client};
 use thiserror::Error;
+use tracing::{error, warn};
+use std::sync::Arc;
+use serenity::prelude::*;
 
 pub(crate) use client::Handler;
 pub(crate) use commands::LinkPedantCommands;
+pub(crate) use replace::MessageProcessor;
 pub use config::{get_configuration, Config, LinkReplacerConfig, ReplacerConfig};
-use tracing::{error, warn};
 
 mod client;
 mod commands;
@@ -22,6 +25,13 @@ pub use util::{get_subscriber, init_subscriber};
 
 pub type Result<T> = ::core::result::Result<T, LinkPedantError>;
 
+
+pub(crate) struct MessageHandler;
+
+impl TypeMapKey for MessageHandler {
+        type Value = Arc<RwLock<MessageProcessor>>;
+}
+
 #[derive(Debug, Error)]
 pub enum LinkPedantError {
     #[error("serenity error")]
@@ -31,7 +41,6 @@ pub enum LinkPedantError {
 }
 
 pub struct LinkPedant {
-    config: Config,
     client: Client,
 }
 
@@ -46,8 +55,12 @@ impl LinkPedant {
             .map_err(|err| {
                 error! {%err, "could not create client"}
                 err
-            })?;
-        Ok(Self { config, client })
+            })?; 
+        {
+            let mut data = client.data.write().await;
+            data.insert::<MessageHandler>(Arc::new(RwLock::new(MessageProcessor::new(&config.replacer_config, config.reddit_media_regex.to_owned()))));
+        }
+        Ok(Self { client })
     }
 
     pub async fn run(&mut self) -> Result<()> {

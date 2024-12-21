@@ -1,44 +1,52 @@
-use super::{LinkProcessor, LinkReplacer, LinkReplacerConfig, ReplaceResult};
+use super::{LinkReplacer, LinkReplacerConfig, ReplaceResult};
 use fancy_regex::Regex;
 use tracing::{debug, instrument};
 use url::Url;
 
 #[derive(Debug, Clone)]
 pub struct YoutubeReplacer {
-    inner: LinkProcessor,
+    new_domain: String,
+    regex: Regex,
+    domain_regex: Regex,
+    strip_query: bool
 }
 
 const YOUTUBE_LINK_RE_STR: &'static str = r"https?://(www\.)?youtube\.com/shorts/[^\s]+";
 const YOUTUBE_DOMAIN_RE_STR: &'static str = r"(www\.)?(youtube\.com/shorts/)";
 
 impl YoutubeReplacer {
-    pub fn new(config: LinkReplacerConfig) -> ReplaceResult<Self> {
-        let new_domain = config.new_domain;
-        let regex_str = config.regex.unwrap_or(YOUTUBE_LINK_RE_STR.to_string());
-        let domain_re_str = config
+    pub fn new(config: &LinkReplacerConfig) -> ReplaceResult<Self> {
+        let new_domain = config.new_domain.to_owned();
+        let regex = Regex::new(config.regex.as_deref().unwrap_or(YOUTUBE_LINK_RE_STR))?;
+        let domain_regex= Regex::new(config
             .domain_re
-            .unwrap_or(YOUTUBE_DOMAIN_RE_STR.to_string());
+            .as_deref()
+            .unwrap_or(YOUTUBE_DOMAIN_RE_STR))?;
         let strip_query = config.strip_query.unwrap_or(true);
-        let inner = LinkProcessor::new(new_domain, &regex_str, &domain_re_str, strip_query)?;
-        Ok(Self { inner })
+
+        Ok(Self { new_domain, regex, domain_regex, strip_query })
     }
 }
 
 impl LinkReplacer for YoutubeReplacer {
     fn get_regex(&self) -> &Regex {
-        self.inner.get_regex()
+        &self.regex
     }
 
     #[instrument(skip(self))]
     fn transform_url(&self, url: &str) -> ReplaceResult<String> {
         debug!("Transforming Youtube Shorts URL...");
         let new_url = self
-            .inner
-            .domain_regex()
-            .replace(url, format!("{}/", self.inner.new_domain()))
+            .domain_regex
+            .replace(url, format!("{}/", self.new_domain))
             .to_string();
         debug! {%new_url, "new url"};
-        Ok(new_url)
+        let mut url = Url::parse(&new_url)?;
+        if self.strip_query {
+            url.set_query(None);
+        };
+        
+        Ok(url.to_string())
     }
 }
 
@@ -49,7 +57,7 @@ mod test {
     use crate::init_tests;
 
     fn create_test_replacer() -> ReplaceResult<YoutubeReplacer> {
-        YoutubeReplacer::new(LinkReplacerConfig {
+        YoutubeReplacer::new(&LinkReplacerConfig {
             new_domain: "youtu.be".into(),
             domain_re: None,
             regex: None,

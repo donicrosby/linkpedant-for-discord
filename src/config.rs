@@ -41,6 +41,7 @@ pub type ReplacerConfig = HashMap<String, LinkReplacerConfig>;
 #[derive(Debug, Deserialize)]
 pub struct Config {
     pub token: String,
+    pub reddit_media_regex: Option<String>,
     #[serde(flatten)]
     pub replacer_config: ReplacerConfig,
 }

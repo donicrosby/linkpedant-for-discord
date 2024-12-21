@@ -39,7 +39,7 @@ impl LinkReplacer for RedditMediaReplacer {
             .into_iter()
             .filter(|(param, _val)| param == "url")
             .map(|(_, val)| val)
-            .reduce(|acc, e| acc)
+            .reduce(|acc, _| acc)
             .ok_or_else(|| ReplaceError::NoQueryParams)?;
         let decoded = decode(&media_url).map_err(|_| ReplaceError::Utf8Decode)?;
         if self.fixable_url(&decoded) {

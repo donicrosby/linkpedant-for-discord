@@ -40,11 +40,12 @@ pub struct LinkProcessor {
 
 impl LinkProcessor {
     pub fn new(
-        new_domain: String,
+        new_domain: &str,
         regex_str: &str,
         domain_re_str: &str,
         strip_query: bool,
     ) -> ReplaceResult<Self> {
+        let new_domain = new_domain.to_owned();
         let link_regex = Regex::new(regex_str)?;
         let domain_regex = Regex::new(domain_re_str)?;
         Ok(Self {
@@ -53,14 +54,6 @@ impl LinkProcessor {
             domain_regex,
             strip_query,
         })
-    }
-
-    pub fn new_domain(&self) -> &str {
-        &self.new_domain
-    }
-
-    pub fn domain_regex(&self) -> &Regex {
-        &self.domain_regex
     }
 }
 

@@ -43,12 +43,14 @@ enum ReplacerType {
     Youtube,
 }
 
+type BoxedLinkReplacer = Box<dyn LinkReplacer + 'static + Sync + Send>;
+
 impl ReplacerType {
     pub fn create_type(
         &self,
-        config: LinkReplacerConfig,
-    ) -> ReplaceResult<Box<dyn LinkReplacer + 'static>> {
-        let replacer: Box<dyn LinkReplacer> = match self {
+        config: &LinkReplacerConfig,
+    ) -> ReplaceResult<BoxedLinkReplacer> {
+        let replacer: BoxedLinkReplacer = match self {
             Self::Bsky => Box::new(BskyReplacer::new(config)?),
             Self::Instagram => Box::new(InstagramReplacer::new(config)?),
             Self::Pixiv => Box::new(PixivReplacer::new(config)?),
@@ -65,21 +67,21 @@ static HTTP_URL_RE: &'static str =
     r"(?:https?://)?(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:/[^\s*~`|>\[\]#()]*)?";
 
 pub struct MessageProcessor {
-    url_processors: Vec<Box<dyn LinkReplacer>>,
+    url_processors: Vec<BoxedLinkReplacer>,
     http_url_regex: Regex,
 }
 
 impl MessageProcessor {
-    pub fn new(config: ReplacerConfig, reddit_media_re: Option<String>) -> Self {
+    pub fn new(config: &ReplacerConfig, reddit_media_re: Option<String>) -> Self {
         let http_url_regex = Regex::new(HTTP_URL_RE).unwrap();
-        let mut url_processors: Vec<Box<dyn LinkReplacer>> = Vec::new();
+        let mut url_processors: Vec<BoxedLinkReplacer> = Vec::new();
         if let Ok(reddit_media_replacer) = RedditMediaReplacer::new(reddit_media_re)
             .map(|r| Box::new(r))
             .map_err(|err| warn! {%err, "error creating reddit media replacer"})
         {
             url_processors.push(reddit_media_replacer)
         }
-        for (replacer_name, config) in config {
+        for (replacer_name, config) in config.iter() {
             let new_replacer = if let Ok(replacer) = ReplacerType::from_str(&replacer_name) {
                 info!("Creating {} replacer...", &replacer_name);
                 replacer.create_type(config)
@@ -98,36 +100,38 @@ impl MessageProcessor {
     }
 
     fn create_custom_replacer(
-        name: String,
-        config: LinkReplacerConfig,
-    ) -> ReplaceResult<Box<dyn LinkReplacer + 'static>> {
+        name: &str,
+        config: &LinkReplacerConfig,
+    ) -> ReplaceResult<BoxedLinkReplacer> {
         if let (Some(regex), Some(domain_re), Some(strip_query)) =
-            (config.regex, config.domain_re, config.strip_query)
+            (config.regex.as_deref(), config.domain_re.as_deref(), config.strip_query)
         {
             info!("Creating custom replacer {}...", name);
-            let custom_replacer: Box<dyn LinkReplacer> = Box::new(LinkProcessor::new(
-                config.new_domain,
+            let custom_replacer: BoxedLinkReplacer = Box::new(LinkProcessor::new(
+                &config.new_domain,
                 &regex,
                 &domain_re,
                 strip_query,
             )?);
             Ok(custom_replacer)
         } else {
-            Err(ReplaceError::InvalidReplacer(name))
+            Err(ReplaceError::InvalidReplacer(name.to_string()))
         }
     }
 
     #[instrument(level = "debug", skip(self))]
-    pub fn process_message(&self, message: &str) -> String {
-        self.http_url_regex
-            .replace_all(message, |caps: &Captures<'_>| {
+    pub fn process_message(&self, msg: &str) -> (String, bool) {
+        let new_msg = self.http_url_regex
+            .replace_all(msg, |caps: &Captures<'_>| {
                 self.url_processors
                     .iter()
                     .fold(caps[0].to_string(), |acc, processor| {
                         processor.process_url(&acc)
                     })
             })
-            .to_string()
+            .to_string();
+        let modified = new_msg.ne(msg);
+        (new_msg, modified)
     }
 }
 
@@ -142,7 +146,7 @@ mod test {
             LinkReplacerConfig::new("vxtiktok.com".into()),
         );
         config.insert("youtube".into(), LinkReplacerConfig::new("youtu.be".into()));
-        let processor = MessageProcessor::new(config, None);
+        let processor = MessageProcessor::new(&config, None);
         Ok(processor)
     }
 
@@ -154,7 +158,8 @@ mod test {
         let expected =
             "Test message with a TikTok link ||https://www.vxtiktok.com/t/ZTYXjHYeg/|| in it.";
 
-        let result = processor.process_message(message);
+        let (result, modified) = processor.process_message(message);
+        assert!(modified);
         assert_eq!(&result, expected);
         Ok(())
     }
@@ -165,7 +170,8 @@ mod test {
         let message = "Test message with **multiple** (https://www.tiktok.com/t/ZTYX2qUvY/) types of links ||https://youtube.com/shorts/xFnfOdb35FI/|| in it.";
         let expected = "Test message with **multiple** (https://www.vxtiktok.com/t/ZTYX2qUvY/) types of links ||https://youtu.be/xFnfOdb35FI/|| in it.";
 
-        let result = processor.process_message(message);
+        let (result, modified) = processor.process_message(message);
+        assert!(modified);
         assert_eq!(&result, expected);
         Ok(())
     }

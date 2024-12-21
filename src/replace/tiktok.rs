@@ -11,10 +11,10 @@ const TIKTOK_LINK_RE_STR: &'static str = r"https?://(\w+\.)?tiktok\.com/((t/)?\w
 const TIKTOK_DOMAIN_RE_STR: &'static str = r"tiktok\.com";
 
 impl TikTokReplacer {
-    pub fn new(config: LinkReplacerConfig) -> ReplaceResult<Self> {
-        let new_domain = config.new_domain;
-        let regex_str = config.regex.unwrap_or(TIKTOK_LINK_RE_STR.to_string());
-        let domain_re_str = config.domain_re.unwrap_or(TIKTOK_DOMAIN_RE_STR.to_string());
+    pub fn new(config: &LinkReplacerConfig) -> ReplaceResult<Self> {
+        let new_domain = &config.new_domain;
+        let regex_str = config.regex.as_deref().unwrap_or(TIKTOK_LINK_RE_STR);
+        let domain_re_str = config.domain_re.as_deref().unwrap_or(TIKTOK_DOMAIN_RE_STR);
         let strip_query = config.strip_query.unwrap_or(true);
         let inner = LinkProcessor::new(new_domain, &regex_str, &domain_re_str, strip_query)?;
         Ok(Self { inner })
@@ -40,7 +40,7 @@ mod test {
     use crate::init_tests;
 
     fn create_test_replacer() -> ReplaceResult<TikTokReplacer> {
-        TikTokReplacer::new(LinkReplacerConfig {
+        TikTokReplacer::new(&LinkReplacerConfig {
             new_domain: "vxtiktok.com".into(),
             domain_re: None,
             regex: None,

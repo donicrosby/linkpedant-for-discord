@@ -11,12 +11,12 @@ const PIXIV_LINK_RE_STR: &'static str = r"https?://(\w+\.)?pixiv\.net/(\w+/)?(ar
 const PIXIV_DOMAIN_RE_STR: &'static str = r"(\w+\.)?(pixiv\.net)";
 
 impl PixivReplacer {
-    pub fn new(config: LinkReplacerConfig) -> ReplaceResult<Self> {
-        let new_domain = config.new_domain;
-        let regex_str = config.regex.unwrap_or(PIXIV_LINK_RE_STR.to_string());
-        let domain_re_str = config.domain_re.unwrap_or(PIXIV_DOMAIN_RE_STR.to_string());
+    pub fn new(config: &LinkReplacerConfig) -> ReplaceResult<Self> {
+        let new_domain = &config.new_domain;
+        let regex_str = config.regex.as_deref().unwrap_or(PIXIV_LINK_RE_STR);
+        let domain_re_str = config.domain_re.as_deref().unwrap_or(PIXIV_DOMAIN_RE_STR);
         let strip_query = config.strip_query.unwrap_or(false);
-        let inner = LinkProcessor::new(new_domain, &regex_str, &domain_re_str, strip_query)?;
+        let inner = LinkProcessor::new(new_domain, regex_str, domain_re_str, strip_query)?;
         Ok(Self { inner })
     }
 }
@@ -40,7 +40,7 @@ mod test {
     use crate::init_tests;
 
     fn create_test_replacer() -> ReplaceResult<PixivReplacer> {
-        PixivReplacer::new(LinkReplacerConfig {
+        PixivReplacer::new(&LinkReplacerConfig {
             new_domain: "phixiv.net".into(),
             domain_re: None,
             regex: None,
