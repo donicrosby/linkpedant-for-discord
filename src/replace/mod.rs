@@ -46,10 +46,7 @@ enum ReplacerType {
 type BoxedLinkReplacer = Box<dyn LinkReplacer + 'static + Sync + Send>;
 
 impl ReplacerType {
-    pub fn create_type(
-        &self,
-        config: &LinkReplacerConfig,
-    ) -> ReplaceResult<BoxedLinkReplacer> {
+    pub fn create_type(&self, config: &LinkReplacerConfig) -> ReplaceResult<BoxedLinkReplacer> {
         let replacer: BoxedLinkReplacer = match self {
             Self::Bsky => Box::new(BskyReplacer::new(config)?),
             Self::Instagram => Box::new(InstagramReplacer::new(config)?),
@@ -63,7 +60,7 @@ impl ReplacerType {
     }
 }
 
-static HTTP_URL_RE: &'static str =
+static HTTP_URL_RE: &str =
     r"(?:https?://)?(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:/[^\s*~`|>\[\]#()]*)?";
 
 pub struct MessageProcessor {
@@ -76,13 +73,13 @@ impl MessageProcessor {
         let http_url_regex = Regex::new(HTTP_URL_RE).unwrap();
         let mut url_processors: Vec<BoxedLinkReplacer> = Vec::new();
         if let Ok(reddit_media_replacer) = RedditMediaReplacer::new(reddit_media_re)
-            .map(|r| Box::new(r))
+            .map(Box::new)
             .map_err(|err| warn! {%err, "error creating reddit media replacer"})
         {
             url_processors.push(reddit_media_replacer)
         }
         for (replacer_name, config) in config.iter() {
-            let new_replacer = if let Ok(replacer) = ReplacerType::from_str(&replacer_name) {
+            let new_replacer = if let Ok(replacer) = ReplacerType::from_str(replacer_name) {
                 info!("Creating {} replacer...", &replacer_name);
                 replacer.create_type(config)
             } else {
@@ -103,14 +100,16 @@ impl MessageProcessor {
         name: &str,
         config: &LinkReplacerConfig,
     ) -> ReplaceResult<BoxedLinkReplacer> {
-        if let (Some(regex), Some(domain_re), Some(strip_query)) =
-            (config.regex.as_deref(), config.domain_re.as_deref(), config.strip_query)
-        {
+        if let (Some(regex), Some(domain_re), Some(strip_query)) = (
+            config.regex.as_deref(),
+            config.domain_re.as_deref(),
+            config.strip_query,
+        ) {
             info!("Creating custom replacer {}...", name);
             let custom_replacer: BoxedLinkReplacer = Box::new(LinkProcessor::new(
                 &config.new_domain,
-                &regex,
-                &domain_re,
+                regex,
+                domain_re,
                 strip_query,
             )?);
             Ok(custom_replacer)
@@ -121,7 +120,8 @@ impl MessageProcessor {
 
     #[instrument(level = "debug", skip(self))]
     pub fn process_message(&self, msg: &str) -> (String, bool) {
-        let new_msg = self.http_url_regex
+        let new_msg = self
+            .http_url_regex
             .replace_all(msg, |caps: &Captures<'_>| {
                 self.url_processors
                     .iter()

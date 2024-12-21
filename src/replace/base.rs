@@ -1,7 +1,7 @@
 use core::fmt::Debug;
 use fancy_regex::{Captures, Regex};
 use thiserror::Error;
-use tracing::{debug, instrument, warn, info};
+use tracing::{debug, info, instrument, warn};
 use url::Url;
 
 #[derive(Debug, Error)]
@@ -96,12 +96,12 @@ pub trait LinkReplacer: Debug {
                     if new_url.eq(orig_url) {
                         Err(ReplaceError::UrlNotModified(new_url))
                     } else {
-                        info!{%orig_url, %new_url, "replaced url"};
+                        info! {%orig_url, %new_url, "replaced url"};
                         Ok(new_url)
                     }
                 })
                 .map_err(|err| warn! {%err, "could not transform url"})
-                .unwrap_or(orig_url.to_string()) 
+                .unwrap_or(orig_url.to_string())
         })
         .to_string()
     }

@@ -7,8 +7,8 @@ pub struct PixivReplacer {
     inner: LinkProcessor,
 }
 
-const PIXIV_LINK_RE_STR: &'static str = r"https?://(\w+\.)?pixiv\.net/(\w+/)?(artworks|member_illust\.php)(/|\?illust_id=)\d+(/?\d+)?[^\s]+";
-const PIXIV_DOMAIN_RE_STR: &'static str = r"(\w+\.)?(pixiv\.net)";
+const PIXIV_LINK_RE_STR: &str = r"https?://(\w+\.)?pixiv\.net/(\w+/)?(artworks|member_illust\.php)(/|\?illust_id=)\d+(/?\d+)?[^\s]+";
+const PIXIV_DOMAIN_RE_STR: &str = r"(\w+\.)?(pixiv\.net)";
 
 impl PixivReplacer {
     pub fn new(config: &LinkReplacerConfig) -> ReplaceResult<Self> {

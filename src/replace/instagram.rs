@@ -7,9 +7,8 @@ pub struct InstagramReplacer {
     inner: LinkProcessor,
 }
 
-const INSTAGRAM_LINK_RE_STR: &'static str =
-    r"https?://(\w+\.)?instagram.com/(p|reel|stories)/[^\s]+";
-const INSTAGRAM_DOMAIN_RE_STR: &'static str = r"(\w+\.)?(instagram\.com)";
+const INSTAGRAM_LINK_RE_STR: &str = r"https?://(\w+\.)?instagram.com/(p|reel|stories)/[^\s]+";
+const INSTAGRAM_DOMAIN_RE_STR: &str = r"(\w+\.)?(instagram\.com)";
 
 impl InstagramReplacer {
     pub fn new(config: &LinkReplacerConfig) -> ReplaceResult<Self> {

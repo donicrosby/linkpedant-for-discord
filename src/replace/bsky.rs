@@ -7,8 +7,9 @@ pub struct BskyReplacer {
     inner: LinkProcessor,
 }
 
-const BSKY_LINK_RE_STR: &'static str = r"https?://(\w+\.)?instagram.com/[^\s]+";
-const BSKY_DOMAIN_RE_STR: &'static str = r"(\w+\.)?(instagram\.com)";
+const BSKY_LINK_RE_STR: &str =
+    r"https?://bsky\.app/profile/((\w|\.|-)+|(did:plc:[234567a-z]{24}))/post/[234567a-z]{13}(?!/)";
+const BSKY_DOMAIN_RE_STR: &str = r"bsky\.app";
 
 impl BskyReplacer {
     pub fn new(config: &LinkReplacerConfig) -> ReplaceResult<Self> {
@@ -41,7 +42,7 @@ mod test {
 
     fn create_test_replacer() -> ReplaceResult<BskyReplacer> {
         BskyReplacer::new(&LinkReplacerConfig {
-            new_domain: "ddinstagram.com".into(),
+            new_domain: "bskyx.app".into(),
             domain_re: None,
             regex: None,
             strip_query: None,
@@ -52,8 +53,8 @@ mod test {
     async fn test_transform_url() -> ReplaceResult<()> {
         init_tests().await;
         let test_replacer = create_test_replacer()?;
-        let url = "https://www.instagram.com/reel/DCQBM9npSBK/?igsh=c2JxNzRidGk1bWhx";
-        let expected = "https://ddinstagram.com/reel/DCQBM9npSBK/";
+        let url = "https://bsky.app/profile/albertflasher.bsky.social/post/3ldpen4om622h";
+        let expected = "https://bskyx.app/profile/albertflasher.bsky.social/post/3ldpen4om622h";
 
         let result = test_replacer.transform_url(&url)?;
         assert_eq!(expected, result);

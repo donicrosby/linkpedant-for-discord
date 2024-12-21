@@ -9,9 +9,9 @@ pub struct RedditMediaReplacer {
     regex: Regex,
 }
 
-const REDDIT_MEDIA_LINK_RE_STR: &'static str = r"https?://(\w+\.)?reddit\.com/media[^\s]+";
+const REDDIT_MEDIA_LINK_RE_STR: &str = r"https?://(\w+\.)?reddit\.com/media[^\s]+";
 
-const FIXABLE_TYPES: &[&'static str] = &[".jpeg", ".jpg", ".png", ".gif", ".webp"];
+const FIXABLE_TYPES: &[&str] = &[".jpeg", ".jpg", ".png", ".gif", ".webp"];
 
 impl RedditMediaReplacer {
     pub fn new(media_re_str: Option<String>) -> ReplaceResult<Self> {
@@ -40,7 +40,7 @@ impl LinkReplacer for RedditMediaReplacer {
             .filter(|(param, _val)| param == "url")
             .map(|(_, val)| val)
             .reduce(|acc, _| acc)
-            .ok_or_else(|| ReplaceError::NoQueryParams)?;
+            .ok_or(ReplaceError::NoQueryParams)?;
         let decoded = decode(&media_url).map_err(|_| ReplaceError::Utf8Decode)?;
         if self.fixable_url(&decoded) {
             let adjusted_url = decoded.replace("//preview.", "//i.");

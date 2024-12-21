@@ -8,23 +8,26 @@ pub struct YoutubeReplacer {
     new_domain: String,
     regex: Regex,
     domain_regex: Regex,
-    strip_query: bool
+    strip_query: bool,
 }
 
-const YOUTUBE_LINK_RE_STR: &'static str = r"https?://(www\.)?youtube\.com/shorts/[^\s]+";
-const YOUTUBE_DOMAIN_RE_STR: &'static str = r"(www\.)?(youtube\.com/shorts/)";
+const YOUTUBE_LINK_RE_STR: &str = r"https?://(www\.)?youtube\.com/shorts/[^\s]+";
+const YOUTUBE_DOMAIN_RE_STR: &str = r"(www\.)?(youtube\.com/shorts/)";
 
 impl YoutubeReplacer {
     pub fn new(config: &LinkReplacerConfig) -> ReplaceResult<Self> {
         let new_domain = config.new_domain.to_owned();
         let regex = Regex::new(config.regex.as_deref().unwrap_or(YOUTUBE_LINK_RE_STR))?;
-        let domain_regex= Regex::new(config
-            .domain_re
-            .as_deref()
-            .unwrap_or(YOUTUBE_DOMAIN_RE_STR))?;
+        let domain_regex =
+            Regex::new(config.domain_re.as_deref().unwrap_or(YOUTUBE_DOMAIN_RE_STR))?;
         let strip_query = config.strip_query.unwrap_or(true);
 
-        Ok(Self { new_domain, regex, domain_regex, strip_query })
+        Ok(Self {
+            new_domain,
+            regex,
+            domain_regex,
+            strip_query,
+        })
     }
 }
 
@@ -45,7 +48,7 @@ impl LinkReplacer for YoutubeReplacer {
         if self.strip_query {
             url.set_query(None);
         };
-        
+
         Ok(url.to_string())
     }
 }

@@ -7,8 +7,8 @@ pub struct TikTokReplacer {
     inner: LinkProcessor,
 }
 
-const TIKTOK_LINK_RE_STR: &'static str = r"https?://(\w+\.)?tiktok\.com/((t/)?\w+|@[^\s]+/video)";
-const TIKTOK_DOMAIN_RE_STR: &'static str = r"tiktok\.com";
+const TIKTOK_LINK_RE_STR: &str = r"https?://(\w+\.)?tiktok\.com/((t/)?\w+|@[^\s]+/video)";
+const TIKTOK_DOMAIN_RE_STR: &str = r"tiktok\.com";
 
 impl TikTokReplacer {
     pub fn new(config: &LinkReplacerConfig) -> ReplaceResult<Self> {
@@ -16,7 +16,7 @@ impl TikTokReplacer {
         let regex_str = config.regex.as_deref().unwrap_or(TIKTOK_LINK_RE_STR);
         let domain_re_str = config.domain_re.as_deref().unwrap_or(TIKTOK_DOMAIN_RE_STR);
         let strip_query = config.strip_query.unwrap_or(true);
-        let inner = LinkProcessor::new(new_domain, &regex_str, &domain_re_str, strip_query)?;
+        let inner = LinkProcessor::new(new_domain, regex_str, domain_re_str, strip_query)?;
         Ok(Self { inner })
     }
 }

@@ -3,11 +3,11 @@ use serenity::all::EditMessage;
 use serenity::async_trait;
 use serenity::builder::{CreateInteractionResponse, CreateInteractionResponseMessage};
 use serenity::model::application::{Command, Interaction};
-use serenity::model::gateway::Ready;
 use serenity::model::channel::Message;
+use serenity::model::gateway::Ready;
 use serenity::prelude::*;
 use serenity_commands::Commands;
-use tracing::{info, instrument, warn, debug};
+use tracing::{debug, info, instrument, warn};
 
 pub(crate) struct Handler;
 
@@ -52,7 +52,6 @@ impl EventHandler for Handler {
 
     #[instrument(skip(self, ctx, message))]
     async fn message(&self, ctx: Context, message: Message) {
-        
         if message.author.bot {
             debug!("message is from a bot, ignoring...");
             return;
@@ -60,11 +59,13 @@ impl EventHandler for Handler {
 
         let mut message = message;
 
-
         let (processed_message, modified) = {
             let data_read = ctx.data.read().await;
 
-            let msg_processor_lock = data_read.get::<MessageHandler>().expect("expected message processor in typemap").clone();
+            let msg_processor_lock = data_read
+                .get::<MessageHandler>()
+                .expect("expected message processor in typemap")
+                .clone();
 
             let processor = msg_processor_lock.read().await;
 
@@ -73,9 +74,19 @@ impl EventHandler for Handler {
 
         if modified {
             debug!("was able to process message, replying...");
-            if let Ok(_) = message.reply(&ctx, processed_message).await.map_err(|err| warn!(%err, "could not reply to original message")) {
+            if message
+                .reply(&ctx, processed_message)
+                .await
+                .map_err(|err| warn!(%err, "could not reply to original message"))
+                .is_ok()
+            {
                 let suppress_embeds = EditMessage::new().suppress_embeds(true);
-                if let Ok(_) = message.edit(&ctx, suppress_embeds).await.map_err(|err| warn!(%err, "unable to edit message")) {
+                if message
+                    .edit(&ctx, suppress_embeds)
+                    .await
+                    .map_err(|err| warn!(%err, "unable to edit message"))
+                    .is_ok()
+                {
                     debug!("finished processing");
                 }
             }

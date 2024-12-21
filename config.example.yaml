@@ -1,2 +1,34 @@
 ---
 token: "Your.Discord.Token.Here"
+#  -- Site Configuration --
+# Each site has the ability to be configured to process sites differently from the default
+#   instagram:
+#     # Custom embedding domain
+#     new_domain: "ddinstagram.com" 
+#     # Custom URL matching regex
+#     regex: https?://(\w+\.)?instagram.com/(p|reel|stories)/[^\s]+
+#     # Custom Domain replacement regex
+#     domain_re: (\w+\.)?(instagram\.com)
+#     # Should strip query string
+#     strip_query: true
+# Ability to add custom sites if just need to replace the domain
+#   some_site:
+#     new_domain: "vxsome-site.com"
+#     regex: https?://(\w+\.)?some-site\.com/[^\s]+
+#     domain_re: (\w+\.)?(some-site\.com)
+#     strip_query: true
+
+instagram:
+  new_domain: "ddinstagram.com"
+pixiv:
+  new_domain: "phixiv.net"
+tiktok:
+  new_domain: "vxtiktok.com"
+reddit:
+  new_domain: "vxreddit.com"
+twitter: 
+  new_domain: "fxtwitter.com"
+youtube:
+  new_domain: "youtu.be"
+bsky: 
+  new_domain: "bskyx.app"

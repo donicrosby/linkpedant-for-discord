@@ -7,9 +7,9 @@ pub struct RedditReplacer {
     inner: LinkProcessor,
 }
 
-const REDDIT_LINK_RE_STR: &'static str =
+const REDDIT_LINK_RE_STR: &str =
     r"https?://(redd.it|((\w+\.)?reddit.com/(r|u|user)/\w+/(s|comments))/)[^\s]+";
-const REDDIT_DOMAIN_RE_STR: &'static str = r"(((\w+\.)?reddit\.com)|(redd\.it))";
+const REDDIT_DOMAIN_RE_STR: &str = r"(((\w+\.)?reddit\.com)|(redd\.it))";
 
 impl RedditReplacer {
     pub fn new(config: &LinkReplacerConfig) -> ReplaceResult<Self> {
