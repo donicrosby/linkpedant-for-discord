@@ -7,15 +7,7 @@ on:
       platforms:
         type: string
         required: false
-        default: linux/amd64,linux/arm/v7,linux/arm64/v8
-      hadolint-dockerfile:
-        type: string
-        required: false
-        default: Dockerfile
-      hadolint-ignore:
-        type: string
-        required: false
-        default: ''
+        default: "['linux/amd64', 'linux/arm/v7', 'linux/arm64/v8']"
       build-args:
         type: string
         required: false
@@ -24,21 +16,14 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ${{ fromJSON(inputs.platforms) }}
     steps:
         # Get the repository's code
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Lint Dockerfile with ignore
-        if: ${{ inputs.hadolint-ignore != ''}}
-        uses: hadolint/hadolint-action@v2.1.0
-        with:
-          dockerfile: ${{ inputs.hadolint-dockerfile }}
-          ignore: ${{ inputs.hadolint-ignore }}
-      - name: Lint Dockerfile
-        if: ${{ inputs.hadolint-ignore == ''}}
-        uses: hadolint/hadolint-action@v2.1.0
-        with:
-          dockerfile: ${{ inputs.hadolint-dockerfile }}
       # https://github.com/docker/setup-qemu-action
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
@@ -51,7 +36,7 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           # list of Docker images to use as base name for tags
-          images: ${{ inputs.images }}
+          images: ${{ inputs.image }}
           # Docker tags based on the following events/attributes
           tags: |
             type=schedule
@@ -74,7 +59,7 @@ jobs:
         if: ${{ inputs.build-args != ''}}
         with:
           build-args: ${{ inputs.build-args }}
-          platforms: ${{ inputs.platforms }}
+          platforms: ${{ matrix.arch }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -84,7 +69,7 @@ jobs:
         uses: docker/build-push-action@v6
         if: ${{ inputs.build-args == ''}}
         with:
-          platforms: ${{ inputs.platforms }}
+          platforms: ${{ matrix.arch }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

@@ -23,5 +23,5 @@ jobs:
     uses: ./.github/workflows/docker.yml
     needs: check
     with:
-      image: ghcr.io/donicrosby/linkpedant
+      images: ghcr.io/donicrosby/linkpedant
     secrets: inherit
