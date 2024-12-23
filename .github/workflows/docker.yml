@@ -7,7 +7,7 @@ on:
       platforms:
         type: string
         required: false
-        default: "['linux/amd64', 'linux/arm/v7', 'linux/arm64/v8']"
+        default: "['linux/amd64', 'linux/arm/v7', 'linux/arm64']"
       build-args:
         type: string
         required: false
