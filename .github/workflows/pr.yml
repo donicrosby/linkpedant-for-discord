@@ -1,6 +1,6 @@
 name: Run Rust Lints
 
-on: [pr, push]
+on: [pull_request, push]
 
 jobs:
   lint-and-check:
