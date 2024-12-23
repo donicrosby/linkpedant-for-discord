@@ -66,6 +66,7 @@ jobs:
     name: Lint Dockerfile
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v3
       - name: Lint Dockerfile with ignore
         if: ${{ inputs.hadolint-ignore != ''}}
         uses: hadolint/hadolint-action@v2.1.0
