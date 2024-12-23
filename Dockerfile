@@ -1,4 +1,4 @@
-FROM rust:latest AS builder
+FROM rust:1.83.0 AS builder
 WORKDIR /app
 
 COPY Cargo.toml .
@@ -15,9 +15,9 @@ COPY locales locales
 COPY src src
 RUN cargo build --release
 
-FROM debian:latest AS release
-RUN apt update \
-    && apt install -y \
+FROM debian:12.8 AS release
+RUN apt-get update \
+    && apt-get install -y \
     dumb-init \
     && rm -rf /var/lib/lists/*;
 
