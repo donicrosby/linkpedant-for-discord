@@ -2,6 +2,15 @@ name: Check Code
 
 on:
   workflow_call:
+    inputs:
+      hadolint-dockerfile:
+        type: string
+        required: false
+        default: Dockerfile
+      hadolint-ignore:
+        type: string
+        required: false
+        default: ''
 
 env:
   CARGO_TERM_COLOR: always
@@ -52,3 +61,19 @@ jobs:
       - name: Generate code coverage
         run: |
           cargo tarpaulin --verbose --workspace
+    
+  docker-lint:
+    name: Lint Dockerfile
+    runs-on: ubuntu-latest
+    steps:
+      - name: Lint Dockerfile with ignore
+        if: ${{ inputs.hadolint-ignore != ''}}
+        uses: hadolint/hadolint-action@v2.1.0
+        with:
+          dockerfile: ${{ inputs.hadolint-dockerfile }}
+          ignore: ${{ inputs.hadolint-ignore }}
+      - name: Lint Dockerfile
+        if: ${{ inputs.hadolint-ignore == ''}}
+        uses: hadolint/hadolint-action@v2.1.0
+        with:
+          dockerfile: ${{ inputs.hadolint-dockerfile }}
