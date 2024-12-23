@@ -5,4 +5,4 @@ on: [pull_request, push]
 jobs:
   lint-and-check:
     uses: ./.github/workflows/check.yml
-  secrets: inherit
+    secrets: inherit
