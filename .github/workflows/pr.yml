@@ -1,0 +1,8 @@
+name: Run Rust Lints
+
+on: [pr, push]
+
+jobs:
+  lint-and-check:
+    uses: ./.github/workflows/check.yml
+  secrets: inherit

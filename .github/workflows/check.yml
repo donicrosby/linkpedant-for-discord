@@ -1,6 +1,7 @@
 name: Check Code
 
-on: [push, pull_request]
+on:
+  workflow_call:
 
 env:
   CARGO_TERM_COLOR: always
