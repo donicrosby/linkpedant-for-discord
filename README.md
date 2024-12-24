@@ -20,6 +20,8 @@ Currently LinkPedant supports the following sites:
     - YouTube Shorts: via a `youtu.be` URL that will link to a full player
 
 It also supports custom sites as long as you just need to swap the domain (i.e. some-site.com -> fxsome-site.com) by just adding them to the list of replacers.
+
+Just modify your config like so
 ```
 replacers:
     ...
@@ -36,12 +38,11 @@ replacers:
 - `/help`: Displays help message with list of commands
 - `/invite`: Get a link to invite the bot to your server
 
-A bot that will fix Discord Embeddings for various links 
-#     # Custom URL matching regex
-#     regex: https?://(\w+\.)?instagram.com/(p|reel|stories)/[^\s]+
-#     # Custom Domain replacement regex
-#     domain_re: (\w+\.)?(instagram\.com)
-#     # Should strip query string
-#     strip_query: bool
+## Self-Hosting
 
-Test
+Setting up your own instance of the bot is pretty straightforward:
+
+- Clone the repository or download the `docker-compose.yaml`
+- Create your own copy of the config file
+  - `cp config.example.yaml config.yaml`
+- Update the config with your Discord Bot Token (see the Discord Docs for how )

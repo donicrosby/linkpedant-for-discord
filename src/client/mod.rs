@@ -1,4 +1,4 @@
-use crate::{BotState, LinkPedantCommands, MessageHandler};
+use crate::{get_invite_command, BotState, LinkPedantCommands, MessageHandler};
 use serenity::all::EditMessage;
 use serenity::async_trait;
 use serenity::builder::{CreateInteractionResponse, CreateInteractionResponseMessage};
@@ -6,7 +6,6 @@ use serenity::model::application::{Command, Interaction};
 use serenity::model::channel::Message;
 use serenity::model::gateway::Ready;
 use serenity::prelude::*;
-use serenity_commands::Commands;
 use tracing::{debug, info, instrument, warn};
 
 pub(crate) struct Handler;
@@ -24,10 +23,19 @@ impl EventHandler for Handler {
             );
         }
         info!("Link Pedant ready!");
+        let invite_url =
+            get_invite_command(ctx.http.application_id().expect("no application id is set")).await;
+        info!("You can invite the bot using this url: {invite_url}");
         let cmds = LinkPedantCommands::create_commands();
         let _ = Command::set_global_commands(&ctx.http, cmds.clone())
             .await
             .map_err(|err| warn! {%err, "could not create global commands"});
+        for guild in &ctx.cache.guilds() {
+            let _ = guild
+                .set_commands(&ctx.http, cmds.clone())
+                .await
+                .map_err(|err| warn! {%guild, %err, "error setting guild commands"});
+        }
     }
 
     #[instrument(skip(self, ctx, interaction))]
@@ -49,7 +57,7 @@ impl EventHandler for Handler {
                     CreateInteractionResponse::Message(
                         CreateInteractionResponseMessage::new()
                             .ephemeral(true)
-                            .content(command_data.run(client_id).await),
+                            .content(command_data.run(client_id, &command.locale).await),
                     ),
                 )
                 .await
