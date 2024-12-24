@@ -74,7 +74,7 @@ impl LinkPedant {
         {
             let mut data = client.data.write().await;
             data.insert::<MessageHandler>(Arc::new(RwLock::new(MessageProcessor::new(
-                &config.replacer_config,
+                &config.replacers,
                 config.reddit_media_regex.to_owned(),
             ))));
             data.insert::<BotState>(state.clone());

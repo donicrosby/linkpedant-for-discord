@@ -2,8 +2,8 @@
 token: "Your.Discord.Token.Here"
 # HTTP Server for health
 http:
-  host: "127.0.0.1"
-  port: "3000"
+  host: 127.0.0.1
+  port: 3000
 #  -- Site Configuration --
 # Each site has the ability to be configured to process sites differently from the default
 #   instagram:
@@ -21,18 +21,18 @@ http:
 #     regex: https?://(\w+\.)?some-site\.com/[^\s]+
 #     domain_re: (\w+\.)?(some-site\.com)
 #     strip_query: true
-
-instagram:
-  new_domain: "ddinstagram.com"
-pixiv:
-  new_domain: "phixiv.net"
-tiktok:
-  new_domain: "vxtiktok.com"
-reddit:
-  new_domain: "vxreddit.com"
-twitter: 
-  new_domain: "fxtwitter.com"
-youtube:
-  new_domain: "youtu.be"
-bsky: 
-  new_domain: "bskyx.app"
+replacers:
+  instagram:
+    new_domain: "ddinstagram.com"
+  pixiv:
+    new_domain: "phixiv.net"
+  tiktok:
+    new_domain: "vxtiktok.com"
+  reddit:
+    new_domain: "vxreddit.com"
+  twitter: 
+    new_domain: "fxtwitter.com"
+  youtube:
+    new_domain: "youtu.be"
+  bsky: 
+    new_domain: "bskyx.app"
