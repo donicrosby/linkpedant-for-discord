@@ -5,7 +5,7 @@ use tracing_subscriber::EnvFilter;
 mod test;
 
 #[cfg(test)]
-pub(crate) use test::init_tests;
+pub(crate) use test::{init_tests, spawn_test_server};
 
 pub fn get_subscriber(env_filter: String) -> impl Subscriber + Send + Sync {
     let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new(env_filter));

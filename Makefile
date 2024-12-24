@@ -1,4 +1,11 @@
 .PHONY: lint
 lint:
 	docker run --rm -i -v ./.hadolint.yaml:/.config/hadolint.yaml hadolint/hadolint < Dockerfile
-all: lint
+test:
+	cargo test
+fmt:
+	cargo fmt
+build:
+	docker buildx build --platform linux/amd64,linux/arm/v7,linux/arm64 -t linkpedant:dev .
+
+all: fmt test lint build

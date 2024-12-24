@@ -32,10 +32,13 @@ FROM debian:12.8 AS release
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
     dumb-init \
+    curl  \
     && rm -rf /var/lib/lists/*;
 WORKDIR /app
 COPY --from=builder /app/linkpedant .
 COPY config.example.yaml config.yaml
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 CMD curl -f http://localhost:3000/health || exit 1
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["/app/linkpedant"]

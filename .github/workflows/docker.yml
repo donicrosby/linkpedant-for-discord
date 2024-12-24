@@ -7,7 +7,7 @@ on:
       platforms:
         type: string
         required: false
-        default: "['linux/amd64', 'linux/arm/v7', 'linux/arm64']"
+        default: "linux/amd64,linux/arm/v7,linux/arm64"
       build-args:
         type: string
         required: false
@@ -16,10 +16,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: ${{ fromJSON(inputs.platforms) }}
     steps:
         # Get the repository's code
       - name: Checkout
@@ -59,7 +55,7 @@ jobs:
         if: ${{ inputs.build-args != ''}}
         with:
           build-args: ${{ inputs.build-args }}
-          platforms: ${{ matrix.arch }}
+          platforms: ${{ inputs.platforms }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -69,7 +65,7 @@ jobs:
         uses: docker/build-push-action@v6
         if: ${{ inputs.build-args == ''}}
         with:
-          platforms: ${{ matrix.arch }}
+          platforms: ${{ inputs.platforms }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

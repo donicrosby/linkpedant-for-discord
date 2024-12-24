@@ -26,7 +26,7 @@ static DEFAULT_MAPPINGS: Lazy<HashMap<String, String>> = Lazy::new(|| {
 });
 
 fn create_default_config(mut config: Config) -> Config {
-    let replacer_config = &mut config.replacer_config;
+    let replacer_config = &mut config.replacers;
     let defaults = Lazy::force(&DEFAULT_MAPPINGS);
     for (replacer_type, replace_domain) in defaults.iter() {
         replacer_config
@@ -41,9 +41,10 @@ pub type ReplacerConfig = HashMap<String, LinkReplacerConfig>;
 #[derive(Debug, Deserialize)]
 pub struct Config {
     pub token: String,
+    #[serde(default)]
+    pub http: HttpConfig,
     pub reddit_media_regex: Option<String>,
-    #[serde(flatten)]
-    pub replacer_config: ReplacerConfig,
+    pub replacers: ReplacerConfig,
 }
 
 #[derive(Debug, Deserialize)]
@@ -77,5 +78,19 @@ impl LinkReplacerConfig {
     pub fn set_strip_query(&mut self, strip_query: bool) -> &mut Self {
         self.strip_query = Some(strip_query);
         self
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct HttpConfig {
+    pub host: String,
+    pub port: u16,
+}
+
+impl Default for HttpConfig {
+    fn default() -> Self {
+        let host = "127.0.0.1".into();
+        let port = 3000;
+        Self { host, port }
     }
 }

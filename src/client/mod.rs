@@ -1,4 +1,4 @@
-use crate::{LinkPedantCommands, MessageHandler};
+use crate::{BotState, LinkPedantCommands, MessageHandler};
 use serenity::all::EditMessage;
 use serenity::async_trait;
 use serenity::builder::{CreateInteractionResponse, CreateInteractionResponseMessage};
@@ -15,6 +15,14 @@ pub(crate) struct Handler;
 impl EventHandler for Handler {
     #[instrument(skip(self, ctx, _ready))]
     async fn ready(&self, ctx: Context, _ready: Ready) {
+        {
+            let mut data = ctx.data.write().await;
+            let status = data.get_mut::<BotState>().expect("could not get bot state");
+            status.store(
+                crate::BotStatus::Ready,
+                std::sync::atomic::Ordering::Relaxed,
+            );
+        }
         info!("Link Pedant ready!");
         let cmds = LinkPedantCommands::create_commands();
         let _ = Command::set_global_commands(&ctx.http, cmds.clone())
