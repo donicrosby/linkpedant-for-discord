@@ -14,15 +14,18 @@ mod commands;
 mod config;
 mod replace;
 mod util;
+mod http;
 
 rust_i18n::i18n!("locales");
 
 #[cfg(test)]
-pub(crate) use util::init_tests;
+pub(crate) use util::{init_tests, spawn_test_server};
 
 pub use util::{get_subscriber, init_subscriber};
 
 pub type Result<T> = ::core::result::Result<T, LinkPedantError>;
+
+pub use http::{start_server, HttpError, BotStatus, AtomicBotStatus};
 
 pub(crate) struct MessageHandler;
 
@@ -36,6 +39,8 @@ pub enum LinkPedantError {
     Serenity(#[from] serenity::Error),
     #[error("config error")]
     Config(#[from] ::config::ConfigError),
+    #[error("http error")]
+    Http(#[from] HttpError)
 }
 
 pub struct LinkPedant {
