@@ -11,7 +11,7 @@ jobs:
   make-release-pr:
     permissions:
       id-token: write
-      pull-requestS: write
+      pull-requests: write
       contents: write
     runs-on: ubuntu-latest
     steps:
