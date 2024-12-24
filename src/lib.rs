@@ -4,10 +4,10 @@ use serenity::{all::GatewayIntents, Client};
 use std::net::TcpListener;
 use std::sync::Arc;
 use thiserror::Error;
-use tracing::{error, warn};
+use tracing::{error, info, warn};
 
 pub(crate) use client::Handler;
-pub(crate) use commands::LinkPedantCommands;
+pub(crate) use commands::{get_invite_command, LinkPedantCommands};
 pub use config::{get_configuration, Config, HttpConfig, LinkReplacerConfig, ReplacerConfig};
 pub(crate) use replace::MessageProcessor;
 
@@ -18,7 +18,7 @@ mod http;
 mod replace;
 mod util;
 
-rust_i18n::i18n!("locales");
+rust_i18n::i18n!("locales", fallback = "en");
 
 #[cfg(test)]
 pub(crate) use util::{init_tests, spawn_test_server};
@@ -90,6 +90,7 @@ impl LinkPedant {
         let listener = TcpListener::bind((self.http_config.host.clone(), self.http_config.port))
             .expect("could not bind to port");
         let server = start_server(listener, self.state.clone())?;
+        let server_handle = server.handle();
         tokio::select! {
             server_res = server => {
                 if let Err(why) = server_res {
@@ -108,7 +109,9 @@ impl LinkPedant {
                 }
             }
         }
-
+        info!("Shutting down http server...");
+        server_handle.stop(true).await;
+        info!("Shutting down discord shards...");
         self.client.shard_manager.shutdown_all().await;
         Ok(())
     }
