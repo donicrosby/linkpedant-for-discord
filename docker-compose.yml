@@ -1,0 +1,6 @@
+services:
+  linkpedant:
+    image: ghcr.io/donicrosby/linkpedant:latest
+    restart: always
+    volumes:
+      - ./config.yaml:/app/config.yaml

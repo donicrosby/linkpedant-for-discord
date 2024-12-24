@@ -36,13 +36,12 @@ jobs:
           # Docker tags based on the following events/attributes
           tags: |
             type=schedule
-            type=ref,event=branch
-            type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
             type=edge
             type=sha
+            type=latest
       - name: Login to GHCR
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
