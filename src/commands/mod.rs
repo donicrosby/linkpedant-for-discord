@@ -28,7 +28,7 @@ impl LinkPedantCommands {
             let mut new_cmd = CreateCommand::new(cmd_name).description(description_str);
             for locale in available_locals {
                 new_cmd = new_cmd
-                    .description_localized(&*locale, t!(description_i18n_str, locale = locale));
+                    .description_localized(locale, t!(description_i18n_str, locale = locale));
             }
             create_cmds.push(new_cmd);
         }
@@ -59,14 +59,22 @@ impl LinkPedantCommands {
         match self {
             Self::Help => {
                 let mut other_cmd_descriptions: Vec<String> = Vec::new();
-                for cmd in Self::iter().filter(|t|*t != Self::Help).map(|c| c.to_string()) {
+                for cmd in Self::iter()
+                    .filter(|t| *t != Self::Help)
+                    .map(|c| c.to_string())
+                {
                     let translation_str = format!("{cmd}.description");
                     let translated_description = t!(translation_str, locale = locale);
                     other_cmd_descriptions.push(format!("\t/{cmd}\t{translated_description}"));
                 }
                 let cmd_descriptions = other_cmd_descriptions.join("\n");
-                t!("help.content", command_descriptions = cmd_descriptions, locale = locale).to_string()
-            },
+                t!(
+                    "help.content",
+                    command_descriptions = cmd_descriptions,
+                    locale = locale
+                )
+                .to_string()
+            }
             Self::Invite => {
                 let invite_url = get_invite_command(client_id).await;
                 t!("invite.content", invite_url = invite_url, locale = locale).to_string()
