@@ -1,5 +1,9 @@
 ---
 token: "Your.Discord.Token.Here"
+# HTTP Server for health
+http:
+  host: "127.0.0.1"
+  port: "3000"
 #  -- Site Configuration --
 # Each site has the ability to be configured to process sites differently from the default
 #   instagram:
