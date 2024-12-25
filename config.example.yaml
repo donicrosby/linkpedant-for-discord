@@ -1,9 +1,19 @@
 ---
-token: "Your.Discord.Token.Here"
-# HTTP Server for health
-http:
-  host: 127.0.0.1
-  port: 3000
+# -- Bot Configuration --
+# You can specify your token in the config file
+# The recommended way is to set it via the BOT_TOKEN environment variable
+# See the docker-compose.yaml file for more info
+# 
+# token: "Your.Discord.Token.Here"
+
+# -- HTTP Server Config --
+# The bot exposes a small http server to allow for health checks and bot status
+# You shouldn't need to change this normally if you're running this in the pre-built container
+#
+# http:
+#   host: 127.0.0.1
+#   port: 3000
+#
 #  -- Site Configuration --
 # Each site has the ability to be configured to process sites differently from the default
 #   instagram:
@@ -15,6 +25,7 @@ http:
 #     domain_re: (\w+\.)?(instagram\.com)
 #     # Should strip query string
 #     strip_query: true
+#
 # Ability to add custom sites if just need to replace the domain
 #   some_site:
 #     new_domain: "vxsome-site.com"

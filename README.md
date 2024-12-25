@@ -17,7 +17,7 @@ Currently LinkPedant supports the following sites:
   - TikTok (video): via [vxtiktok](https://github.com/dylanpdx/vxtiktok)
   - Instagram (image, video, and reels): via [ddinstagram](https://github.com/Wikidepia/InstaFix)
   - Reddit (text, image, and video): via [vxreddit](https://github.com/dylanpdx/vxReddit)
-  - YouTube Shorts: via a `youtu.be` URL that will link to a full player
+  - YouTube (shorts and normal videos): via a `youtu.be` URL that will link to a full player
 
 It also supports custom sites as long as you just need to swap the domain (i.e. some-site.com -> fxsome-site.com) by just adding them to the list of replacers.
 
@@ -29,7 +29,7 @@ replacers:
         new_domain: "fxsome-site.com" # replacement domain
         regex: https?://(\w+\.)?some-site\.com/[^\s]+ # regex for what URLs that should be modified
         domain_re: (\w+\.)?(some-site\.com) # regex for 
-        strip_query: true
+        strip_query: true # You should probably strip the query string
     other_replacer:
         ...
 ```
@@ -45,4 +45,5 @@ Setting up your own instance of the bot is pretty straightforward:
 - Clone the repository or download the `docker-compose.yaml`
 - Create your own copy of the config file
   - `cp config.example.yaml config.yaml`
-- Update the config with your Discord Bot Token (see the Discord Docs for how )
+- Update the config with your Discord Bot Token (see the Discord Docs for how)
+- Once you run the bot the logs will output the proper link you need to go to in order to add your bot to your server
