@@ -1,4 +1,4 @@
-use super::{LinkReplacer, LinkReplacerConfig, ReplaceResult};
+use super::{LinkReplacer, LinkReplacerConfig, ReplaceError, ReplaceResult};
 use fancy_regex::Regex;
 use tracing::{debug, instrument};
 use url::Url;
@@ -11,8 +11,9 @@ pub struct YoutubeReplacer {
     strip_query: bool,
 }
 
-const YOUTUBE_LINK_RE_STR: &str = r"https?://(www\.)?youtube\.com/shorts/[^\s]+";
-const YOUTUBE_DOMAIN_RE_STR: &str = r"(www\.)?(youtube\.com/shorts/)";
+const YOUTUBE_LINK_RE_STR: &str =
+    r"https?://(www\.)?youtube\.com/(shorts/[^\s]+|watch\?(?:&?(?:[^\s]+\=[^\s]+))+)";
+const YOUTUBE_DOMAIN_RE_STR: &str = r"(www\.)?(youtube\.com/(shorts/|watch\?v=))";
 
 impl YoutubeReplacer {
     pub fn new(config: &LinkReplacerConfig) -> ReplaceResult<Self> {
@@ -38,10 +39,32 @@ impl LinkReplacer for YoutubeReplacer {
 
     #[instrument(skip(self))]
     fn transform_url(&self, url: &str) -> ReplaceResult<String> {
-        debug!("Transforming Youtube Shorts URL...");
+        debug!("Transforming Youtube URL...");
+        let url = if url.contains("watch") {
+            // Handle regular youtube link
+            let mut url = Url::parse(url)?;
+            let query = url
+                .query_pairs()
+                .into_iter()
+                .filter_map(|(field, value)| {
+                    if field == "v" {
+                        Some(format!("{field}={value}"))
+                    } else {
+                        None
+                    }
+                })
+                .take(1)
+                .next()
+                .ok_or(ReplaceError::NoQueryParams)?;
+            url.set_query(Some(&query));
+            url.to_string()
+        } else {
+            // Handle shorts link
+            url.to_string()
+        };
         let new_url = self
             .domain_regex
-            .replace(url, format!("{}/", self.new_domain))
+            .replace(&url, format!("{}/", self.new_domain))
             .to_string();
         debug! {%new_url, "new url"};
         let mut url = Url::parse(&new_url)?;
@@ -69,11 +92,35 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_transform_url() -> ReplaceResult<()> {
+    async fn test_transform_shorts_url() -> ReplaceResult<()> {
         init_tests().await;
         let test_replacer = create_test_replacer()?;
         let url = "https://youtube.com/shorts/xFnfOdb35FI/";
         let expected = "https://youtu.be/xFnfOdb35FI/";
+
+        let result = test_replacer.transform_url(&url)?;
+        assert_eq!(expected, result);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_transform_normal_youtube_link() -> ReplaceResult<()> {
+        init_tests().await;
+        let test_replacer = create_test_replacer()?;
+        let url = "https://www.youtube.com/watch?v=Z5OUviAH2Yc/";
+        let expected = "https://youtu.be/Z5OUviAH2Yc/";
+
+        let result = test_replacer.transform_url(&url)?;
+        assert_eq!(expected, result);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_transform_normal_youtube_link_extra_query_params() -> ReplaceResult<()> {
+        init_tests().await;
+        let test_replacer = create_test_replacer()?;
+        let url = "https://www.youtube.com/watch?some=field&v=Z5OUviAH2Yc/";
+        let expected = "https://youtu.be/Z5OUviAH2Yc/";
 
         let result = test_replacer.transform_url(&url)?;
         assert_eq!(expected, result);
