@@ -17,7 +17,7 @@ Currently LinkPedant supports the following sites:
   - TikTok (video): via [vxtiktok](https://github.com/dylanpdx/vxtiktok)
   - Instagram (image, video, and reels): via [ddinstagram](https://github.com/Wikidepia/InstaFix)
   - Reddit (text, image, and video): via [vxreddit](https://github.com/dylanpdx/vxReddit)
-  - YouTube Shorts: via a `youtu.be` URL that will link to a full player
+  - YouTube (shorts and normal videos): via a `youtu.be` URL that will link to a full player
 
 It also supports custom sites as long as you just need to swap the domain (i.e. some-site.com -> fxsome-site.com) by just adding them to the list of replacers.
 
