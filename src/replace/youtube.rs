@@ -12,8 +12,8 @@ pub struct YoutubeReplacer {
 }
 
 const YOUTUBE_LINK_RE_STR: &str =
-    r"https?://(www\.)?youtube\.com/(shorts/[^\s]+|watch\?(?:&?(?:[^\s]+\=[^\s]+))+)";
-const YOUTUBE_DOMAIN_RE_STR: &str = r"(www\.)?(youtube\.com/(shorts/|watch\?v=))";
+    r"https?://((www|m)\.)?youtube\.com/(shorts/[^\s]+|watch\?(?:&?(?:[^\s]+\=[^\s]+))+)";
+const YOUTUBE_DOMAIN_RE_STR: &str = r"((www|m)\.)?(youtube\.com/(shorts/|watch\?v=))";
 
 impl YoutubeReplacer {
     pub fn new(config: &LinkReplacerConfig) -> ReplaceResult<Self> {
@@ -120,6 +120,18 @@ mod test {
         init_tests().await;
         let test_replacer = create_test_replacer()?;
         let url = "https://www.youtube.com/watch?some=field&v=Z5OUviAH2Yc/";
+        let expected = "https://youtu.be/Z5OUviAH2Yc/";
+
+        let result = test_replacer.transform_url(&url)?;
+        assert_eq!(expected, result);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_transform_mobile_youtube_links() -> ReplaceResult<()> {
+        init_tests().await;
+        let test_replacer = create_test_replacer()?;
+        let url = "https://m.youtube.com/watch?v=Z5OUviAH2Yc/";
         let expected = "https://youtu.be/Z5OUviAH2Yc/";
 
         let result = test_replacer.transform_url(&url)?;
