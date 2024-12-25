@@ -2,5 +2,9 @@ services:
   linkpedant:
     image: ghcr.io/donicrosby/linkpedant:latest
     restart: always
+    env:
+      BOT_TOKEN: "Your.discord.token.here"
+    # Or use a .env file with:
+    # env_file: .env
     volumes:
       - ./config.yaml:/app/config.yaml

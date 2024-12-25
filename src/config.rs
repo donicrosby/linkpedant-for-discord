@@ -6,6 +6,7 @@ use std::collections::HashMap;
 pub fn get_configuration() -> Result<Config, ConfigError> {
     let config = config::Config::builder()
         .add_source(config::File::with_name("config"))
+        .add_source(config::Environment::with_prefix("BOT").prefix_separator("_").separator("__"))
         .build()?;
     config
         .try_deserialize::<Config>()
