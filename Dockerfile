@@ -17,7 +17,7 @@ WORKDIR /app
 
 # Prepare the "recipe" for our app
 FROM --platform=$BUILDPLATFORM chef AS planner
-COPY Cargo.toml Cargo.lock .
+COPY Cargo.toml Cargo.lock ./
 RUN cargo chef prepare --recipe-path recipe.json
 
 # Do the actual build
