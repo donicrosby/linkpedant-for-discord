@@ -28,12 +28,31 @@ FROM --platform=$BUILDPLATFORM chef AS builder
 COPY --from=planner /app/recipe.json recipe.json
 # Which build are we doing?
 ARG TARGETPLATFORM
+# Which build are we doing?
 RUN case "$TARGETPLATFORM" in \
     "linux/arm/v7") echo armv7-unknown-linux-gnueabihf > /rust_target.txt ;; \
     "linux/arm64") echo aarch64-unknown-linux-gnu > /rust_target.txt ;; \
     "linux/amd64") echo x86_64-unknown-linux-gnu > /rust_target.txt ;; \
     *) exit 1 ;; \
 esac
+<<<<<<< HEAD
+=======
+# Add the target if it doesn't exist already
+RUN rustup target add "$(cat /rust_target.txt)"
+
+# Prepare the "recipe" for our app
+FROM --platform=$BUILDPLATFORM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+# Do the actual build
+FROM --platform=$BUILDPLATFORM chef AS builder
+# Set the needed cargo ENVs to be able to properly build and link the cross-compiled binaries
+ENV CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc CC_armv7_unknown_Linux_gnueabihf=arm-linux-gnueabihf-gcc CXX_armv7_unknown_linux_gnueabihf=arm-linux-gnueabihf-g++
+ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc CXX_aarch64_unknown_linux_gnu=aarch64-linux-gnu-g++
+# Get the recipe
+COPY --from=planner /app/recipe.json recipe.json
+>>>>>>> master
 # Cache our pre-compiled dependencies
 RUN cargo chef cook --release --target "$(cat /rust_target.txt)"
 COPY . .
