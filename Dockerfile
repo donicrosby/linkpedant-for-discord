@@ -35,8 +35,6 @@ RUN case "$TARGETPLATFORM" in \
     "linux/amd64") echo x86_64-unknown-linux-gnu > /rust_target.txt ;; \
     *) exit 1 ;; \
 esac
-<<<<<<< HEAD
-=======
 # Add the target if it doesn't exist already
 RUN rustup target add "$(cat /rust_target.txt)"
 
@@ -52,7 +50,6 @@ ENV CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc CC
 ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc CXX_aarch64_unknown_linux_gnu=aarch64-linux-gnu-g++
 # Get the recipe
 COPY --from=planner /app/recipe.json recipe.json
->>>>>>> master
 # Cache our pre-compiled dependencies
 RUN cargo chef cook --release --target "$(cat /rust_target.txt)"
 COPY . .
