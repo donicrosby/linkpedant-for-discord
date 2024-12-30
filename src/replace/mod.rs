@@ -1,11 +1,15 @@
 use std::str::FromStr;
 
 pub use crate::{LinkReplacerConfig, ReplacerConfig};
-pub(crate) use base::{LinkProcessor, LinkReplacer, ReplaceError, ReplaceResult};
+pub(crate) use base::{
+    LinkProcessor, LinkReplacer, ProcessorConfig, ReplaceConfigError, ReplaceConfigResult,
+    ReplaceError, ReplaceResult,
+};
 use fancy_regex::{Captures, Regex};
 use strum::EnumString;
 use tracing::{info, instrument, warn};
 
+mod amazon;
 mod base;
 mod bsky;
 mod instagram;
@@ -16,14 +20,17 @@ mod tiktok;
 mod twitter;
 mod youtube;
 
-use bsky::BskyReplacer;
-use instagram::InstagramReplacer;
-use pixiv::PixivReplacer;
-use reddit::RedditReplacer;
+use amazon::AmazonReplacer;
+pub(super) use bsky::BskyReplacer;
+pub(super) use instagram::InstagramReplacer;
+pub(super) use pixiv::PixivReplacer;
+pub(super) use reddit::RedditReplacer;
 use reddit_media::RedditMediaReplacer;
-use tiktok::TikTokReplacer;
-use twitter::TwitterReplacer;
-use youtube::YoutubeReplacer;
+pub(super) use tiktok::TikTokReplacer;
+pub(super) use twitter::TwitterReplacer;
+pub(super) use youtube::YoutubeReplacer;
+
+pub use amazon::AmazonConfig;
 
 #[derive(Debug, EnumString, PartialEq)]
 enum ReplacerType {
@@ -46,15 +53,18 @@ enum ReplacerType {
 type BoxedLinkReplacer = Box<dyn LinkReplacer + 'static + Sync + Send>;
 
 impl ReplacerType {
-    pub fn create_type(&self, config: &LinkReplacerConfig) -> ReplaceResult<BoxedLinkReplacer> {
+    pub fn create_type(
+        &self,
+        config: &LinkReplacerConfig,
+    ) -> ReplaceConfigResult<BoxedLinkReplacer> {
         let replacer: BoxedLinkReplacer = match self {
-            Self::Bsky => Box::new(BskyReplacer::new(config)?),
-            Self::Instagram => Box::new(InstagramReplacer::new(config)?),
-            Self::Pixiv => Box::new(PixivReplacer::new(config)?),
-            Self::Reddit => Box::new(RedditReplacer::new(config)?),
-            Self::TikTok => Box::new(TikTokReplacer::new(config)?),
-            Self::Twitter => Box::new(TwitterReplacer::new(config)?),
-            Self::Youtube => Box::new(YoutubeReplacer::new(config)?),
+            Self::Bsky => Box::new(BskyReplacer::new(config.try_into()?)),
+            Self::Instagram => Box::new(InstagramReplacer::new(config.try_into()?)),
+            Self::Pixiv => Box::new(PixivReplacer::new(config.try_into()?)),
+            Self::Reddit => Box::new(RedditReplacer::new(config.try_into()?)),
+            Self::TikTok => Box::new(TikTokReplacer::new(config.try_into()?)),
+            Self::Twitter => Box::new(TwitterReplacer::new(config.try_into()?)),
+            Self::Youtube => Box::new(YoutubeReplacer::new(config.try_into()?)),
         };
         Ok(replacer)
     }
@@ -69,7 +79,11 @@ pub struct MessageProcessor {
 }
 
 impl MessageProcessor {
-    pub fn new(config: &ReplacerConfig, reddit_media_re: Option<String>) -> Self {
+    pub fn new(
+        config: &ReplacerConfig,
+        reddit_media_re: Option<String>,
+        amazon_config: &AmazonConfig,
+    ) -> Self {
         let http_url_regex = Regex::new(HTTP_URL_RE).unwrap();
         let mut url_processors: Vec<BoxedLinkReplacer> = Vec::new();
         if let Ok(reddit_media_replacer) = RedditMediaReplacer::new(reddit_media_re)
@@ -77,6 +91,12 @@ impl MessageProcessor {
             .map_err(|err| warn! {%err, "error creating reddit media replacer"})
         {
             url_processors.push(reddit_media_replacer)
+        }
+        if let Ok(amazon_replacer) = AmazonReplacer::new(amazon_config)
+            .map(Box::new)
+            .map_err(|err| warn! {%err, "error creating amazon shortener"})
+        {
+            url_processors.push(amazon_replacer)
         }
         for (replacer_name, config) in config.iter() {
             let new_replacer = if let Ok(replacer) = ReplacerType::from_str(replacer_name) {
@@ -99,22 +119,28 @@ impl MessageProcessor {
     fn create_custom_replacer(
         name: &str,
         config: &LinkReplacerConfig,
-    ) -> ReplaceResult<BoxedLinkReplacer> {
-        if let (Some(regex), Some(domain_re), Some(strip_query)) = (
-            config.regex.as_deref(),
-            config.domain_re.as_deref(),
-            config.strip_query,
-        ) {
-            info!("Creating custom replacer {}...", name);
-            let custom_replacer: BoxedLinkReplacer = Box::new(LinkProcessor::new(
-                &config.new_domain,
-                regex,
-                domain_re,
-                strip_query,
-            )?);
-            Ok(custom_replacer)
+    ) -> ReplaceConfigResult<BoxedLinkReplacer> {
+        if let Some(new_domain) = config.new_domain.clone() {
+            if let (Some(regex), Some(domain_re), Some(strip_query)) = (
+                config.regex.as_deref(),
+                config.domain_re.as_deref(),
+                config.strip_query,
+            ) {
+                info!("Creating custom replacer {}...", name);
+                let config = ProcessorConfig::new(new_domain, regex, domain_re, strip_query)?;
+                let custom_replacer: BoxedLinkReplacer = Box::new(LinkProcessor::new(config));
+                Ok(custom_replacer)
+            } else if config.regex.is_none() {
+                Err(ReplaceConfigError::MissingOption("Link Regex".to_string()))
+            } else if config.domain_re.is_none() {
+                Err(ReplaceConfigError::MissingOption(
+                    "Domain Regex".to_string(),
+                ))
+            } else {
+                Err(ReplaceConfigError::MissingOption("Strip Query".to_string()))
+            }
         } else {
-            Err(ReplaceError::InvalidReplacer(name.to_string()))
+            Err(ReplaceConfigError::InvalidReplacer(name.to_string()))
         }
     }
 
@@ -146,7 +172,7 @@ mod test {
             LinkReplacerConfig::new("vxtiktok.com".into()),
         );
         config.insert("youtube".into(), LinkReplacerConfig::new("youtu.be".into()));
-        let processor = MessageProcessor::new(&config, None);
+        let processor = MessageProcessor::new(&config, None, &AmazonConfig::default());
         Ok(processor)
     }
 

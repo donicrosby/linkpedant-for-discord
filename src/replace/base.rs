@@ -6,9 +6,6 @@ use url::Url;
 
 #[derive(Debug, Error)]
 pub enum ReplaceError {
-    #[error("regex error")]
-    Regex(#[from] fancy_regex::Error),
-
     #[error("url error")]
     Url(#[from] url::ParseError),
 
@@ -24,30 +21,45 @@ pub enum ReplaceError {
     #[error("utf8 decode")]
     Utf8Decode,
 
+    #[error("regex missing named capture group")]
+    MissingGroup(String),
+
+    #[error("config error")]
+    Config(#[from] ReplaceConfigError),
+}
+
+#[derive(Debug, Error)]
+pub enum ReplaceConfigError {
+    #[error("regex error")]
+    Regex(#[from] fancy_regex::Error),
+
+    #[error("missing config option")]
+    MissingOption(String),
+
     #[error("invalid custom replacer")]
     InvalidReplacer(String),
 }
 
-pub type ReplaceResult<T> = core::result::Result<T, ReplaceError>;
+pub type ReplaceResult<T> = std::result::Result<T, ReplaceError>;
+pub type ReplaceConfigResult<T> = std::result::Result<T, ReplaceConfigError>;
 
 #[derive(Debug, Clone)]
-pub struct LinkProcessor {
-    new_domain: String,
-    link_regex: Regex,
-    domain_regex: Regex,
-    strip_query: bool,
+pub struct ProcessorConfig {
+    pub new_domain: String,
+    pub link_regex: Regex,
+    pub domain_regex: Regex,
+    pub strip_query: bool,
 }
 
-impl LinkProcessor {
+impl ProcessorConfig {
     pub fn new(
-        new_domain: &str,
-        regex_str: &str,
-        domain_re_str: &str,
+        new_domain: String,
+        link_regex: &str,
+        domain_regex: &str,
         strip_query: bool,
-    ) -> ReplaceResult<Self> {
-        let new_domain = new_domain.to_owned();
-        let link_regex = Regex::new(regex_str)?;
-        let domain_regex = Regex::new(domain_re_str)?;
+    ) -> ReplaceConfigResult<Self> {
+        let link_regex = Regex::new(link_regex)?;
+        let domain_regex = Regex::new(domain_regex)?;
         Ok(Self {
             new_domain,
             link_regex,
@@ -57,22 +69,35 @@ impl LinkProcessor {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct LinkProcessor {
+    config: ProcessorConfig,
+}
+
+impl LinkProcessor {
+    pub fn new(config: ProcessorConfig) -> Self {
+        Self { config }
+    }
+}
+
 impl LinkReplacer for LinkProcessor {
     fn get_regex(&self) -> &Regex {
-        &self.link_regex
+        &self.config.link_regex
     }
 
     #[instrument(skip(self))]
     fn transform_url(&self, url: &str) -> ReplaceResult<String> {
         debug!("Parsing URL...");
         let mut url = Url::parse(url)?;
-        let new_host = url
-            .host_str()
-            .ok_or(ReplaceError::UrlHost)
-            .map(|h| self.domain_regex.replace(h, &self.new_domain).to_string())?;
+        let new_host = url.host_str().ok_or(ReplaceError::UrlHost).map(|h| {
+            self.config
+                .domain_regex
+                .replace(h, &self.config.new_domain)
+                .to_string()
+        })?;
         debug! {%new_host, "setting new host"};
         url.set_host(Some(&new_host))?;
-        if self.strip_query {
+        if self.config.strip_query {
             url.set_query(None);
         }
         let new_url = url.to_string();

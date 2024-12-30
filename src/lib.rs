@@ -9,6 +9,7 @@ use tracing::{error, info, warn};
 pub(crate) use client::Handler;
 pub(crate) use commands::{get_invite_command, LinkPedantCommands};
 pub use config::{get_configuration, Config, HttpConfig, LinkReplacerConfig, ReplacerConfig};
+pub use replace::AmazonConfig;
 pub(crate) use replace::MessageProcessor;
 
 mod client;
@@ -76,6 +77,7 @@ impl LinkPedant {
             data.insert::<MessageHandler>(Arc::new(RwLock::new(MessageProcessor::new(
                 &config.replacers,
                 config.reddit_media_regex.to_owned(),
+                &config.amazon,
             ))));
             data.insert::<BotState>(state.clone());
         }
