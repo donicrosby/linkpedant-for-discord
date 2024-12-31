@@ -65,7 +65,7 @@ pub(crate) async fn get_invite_command(client_id: ApplicationId) -> String {
 }
 
 impl LinkPedantCommands {
-    pub async fn run(self, client_id: ApplicationId, locale: &str) -> String {
+    pub async fn run(self, client_id: ApplicationId, delete_emoji: &str, locale: &str) -> String {
         match self {
             Self::Help => {
                 let mut other_cmd_descriptions: Vec<String> = Vec::new();
@@ -80,6 +80,7 @@ impl LinkPedantCommands {
                 let cmd_descriptions = other_cmd_descriptions.join("\n");
                 t!(
                     "help.content",
+                    delete_emoji = delete_emoji,
                     command_descriptions = cmd_descriptions,
                     locale = locale
                 )

@@ -95,6 +95,17 @@ impl Handler {
         ctx: &'a Context,
         reaction: Reaction,
     ) -> Result<(&'a Context, Message, DeleteReplyReaction), BotClientErrors> {
+        
+        let emoji = self.get_reaction_emoji(ctx).await?;
+
+        reaction
+            .message(&ctx)
+            .map_err(|e| e.into())
+            .await
+            .map(|msg| (ctx, msg, emoji))
+    }
+
+    async fn get_reaction_emoji(&self, ctx: &Context) -> Result<DeleteReplyReaction, BotClientErrors> {
         let data_read = ctx.data.read().await;
 
         let delete_reply_config_lock = data_read
@@ -102,11 +113,8 @@ impl Handler {
             .ok_or(BotClientErrors::NoDeleteReply)?
             .clone();
         let emoji = delete_reply_config_lock.read().await.clone();
-        reaction
-            .message(&ctx)
-            .map_err(|e| e.into())
-            .await
-            .map(|msg| (ctx, msg, emoji))
+
+        Ok(emoji)
     }
 
     async fn reaction_handler(
@@ -242,13 +250,14 @@ impl EventHandler for Handler {
                 .map_err(|err| warn! {%err, "could not parse interaction command"})
                 .unwrap();
             let client_id = ctx.http.application_id().expect("no application id is set");
+            let delete_emoji = self.get_reaction_emoji(&ctx).await.expect("could not get reaction emoji");
             command
                 .create_response(
                     ctx,
                     CreateInteractionResponse::Message(
                         CreateInteractionResponseMessage::new()
                             .ephemeral(true)
-                            .content(command_data.run(client_id, &command.locale).await),
+                            .content(command_data.run(client_id, delete_emoji.as_ref(), &command.locale).await),
                     ),
                 )
                 .await
