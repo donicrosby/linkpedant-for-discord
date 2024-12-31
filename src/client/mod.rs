@@ -1,11 +1,13 @@
-use crate::{get_invite_command, BotState, LinkPedantCommands, MessageHandler};
-use serenity::all::{EditMessage, ErrorResponse, Permissions, StatusCode};
+use crate::{
+    get_invite_command, BotState, DeleteReplyReaction, DeleteReplyReactionConfig,
+    LinkPedantCommands, MessageHandler,
+};
+use serenity::all::{EditMessage, ErrorResponse, Permissions, Reaction, Ready, StatusCode};
 use serenity::async_trait;
 use serenity::builder::{CreateInteractionResponse, CreateInteractionResponseMessage};
-use serenity::futures::TryFutureExt;
+use serenity::futures::{future, TryFutureExt};
 use serenity::model::application::{Command, Interaction};
 use serenity::model::channel::Message;
-use serenity::model::gateway::Ready;
 use serenity::prelude::*;
 use std::fmt::Display;
 use thiserror::Error;
@@ -34,6 +36,16 @@ enum BotClientErrors {
     NotModified,
     #[error("insufficient permissions: `{0}`")]
     InsufficientPermissions(NeededPermissions),
+    #[error("no delete emoji in typemap")]
+    NoDeleteReply,
+    #[error("not my message")]
+    NotMyMessage,
+    #[error("invalid delete emoji")]
+    InvalidEmoji,
+    #[error("no replied message")]
+    NoReply,
+    #[error("not original author")]
+    NotOriginalAuthor,
     #[error("serenity error: {0}")]
     Serenity(#[from] SerenityError),
 }
@@ -54,7 +66,11 @@ impl Handler {
             .and_then(|(ctx, message, reply)| async move {
                 let mut message = message;
                 let suppress_embeds = EditMessage::new().suppress_embeds(true);
-                if let Err(err) = message.edit(ctx, suppress_embeds).map_err(Self::parse_errors).await {
+                if let Err(err) = message
+                    .edit(ctx, suppress_embeds)
+                    .map_err(Self::parse_errors)
+                    .await
+                {
                     warn!("unable to edit original message, cleaning up...");
                     match reply.delete(ctx).map_err(Self::parse_errors).await {
                         Ok(_) => Err(err),
@@ -70,6 +86,76 @@ impl Handler {
             .and_then(|_| async move {
                 debug!("finished processing");
                 Ok(())
+            })
+            .await
+    }
+
+    async fn get_reaction_message<'a>(
+        &self,
+        ctx: &'a Context,
+        reaction: Reaction,
+    ) -> Result<(&'a Context, Message, DeleteReplyReaction), BotClientErrors> {
+        let data_read = ctx.data.read().await;
+
+        let delete_reply_config_lock = data_read
+            .get::<DeleteReplyReactionConfig>()
+            .ok_or(BotClientErrors::NoDeleteReply)?
+            .clone();
+        let emoji = delete_reply_config_lock.read().await.clone();
+        reaction
+            .message(&ctx)
+            .map_err(|e| e.into())
+            .await
+            .map(|msg| (ctx, msg, emoji))
+    }
+
+    async fn reaction_handler(
+        &self,
+        ctx: Context,
+        reaction_add: Reaction,
+    ) -> Result<(), BotClientErrors> {
+        let emoji = reaction_add.emoji.clone();
+        let reaction_user = reaction_add.user(&ctx).await?;
+        let guild = reaction_add
+            .guild_id
+            .map(|g| g.get().to_string())
+            .unwrap_or(String::from("None"));
+        self.get_reaction_message(&ctx, reaction_add)
+            .and_then(|(ctx, msg, emoji)| async move {
+                let author = msg.author.clone();
+                let me = ctx.cache.current_user().clone();
+                if author.eq(&me) {
+                    Ok((ctx, msg, emoji))
+                } else {
+                    Err(BotClientErrors::NotMyMessage)
+                }
+            })
+            .and_then(|(ctx, msg, delete_emoji)| async move {
+                if emoji.unicode_eq(delete_emoji.as_ref()) {
+                    Ok((ctx, msg))
+                } else {
+                    Err(BotClientErrors::InvalidEmoji)
+                }
+            })
+            .and_then(|(ctx, msg)| async move {
+                future::ready(
+                    msg.referenced_message
+                        .clone()
+                        .ok_or(BotClientErrors::NoReply),
+                )
+                .and_then(|ref_msg| async move {
+                    let user_id = ref_msg.author.id.clone();
+                    if ref_msg.author.eq(&reaction_user) {
+                        Ok(user_id)
+                    } else {
+                        Err(BotClientErrors::NotOriginalAuthor)
+                    }
+                })
+                .and_then(|user| async move {
+                    info! {%guild, %user, "deleting reply to user"};
+                    msg.delete(&ctx).map_err(Self::parse_errors).await
+                })
+                .await
             })
             .await
     }
@@ -105,8 +191,11 @@ impl Handler {
                 } else {
                     err.into()
                 }
-            },
-            SerenityError::Http(HttpError::UnsuccessfulRequest(ErrorResponse { status_code: StatusCode::FORBIDDEN, ..})) => BotClientErrors::InsufficientPermissions(NeededPermissions::EditMessage),
+            }
+            SerenityError::Http(HttpError::UnsuccessfulRequest(ErrorResponse {
+                status_code: StatusCode::FORBIDDEN,
+                ..
+            })) => BotClientErrors::InsufficientPermissions(NeededPermissions::EditMessage),
             e => e.into(),
         }
     }
@@ -180,6 +269,20 @@ impl EventHandler for Handler {
                 info!("cannot reply to message, ignoring...");
             } else {
                 warn! {%err, "processing message"};
+            }
+        }
+    }
+
+    #[instrument(skip(self, ctx, reaction_add))]
+    async fn reaction_add(&self, ctx: Context, reaction_add: Reaction) {
+        if let Err(err) = self.reaction_handler(ctx, reaction_add).await {
+            match err {
+                BotClientErrors::NotMyMessage => debug!("reaction was not on my message"),
+                BotClientErrors::InvalidEmoji => debug!("reaction was not the correct emoji"),
+                BotClientErrors::NotOriginalAuthor => debug!("reaction wasn't from original author"),
+                err => {
+                    warn! {%err, "handling reaction add"}
+                }
             }
         }
     }
