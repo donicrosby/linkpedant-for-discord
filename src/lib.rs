@@ -62,7 +62,8 @@ impl LinkPedant {
     pub async fn new(config: Config) -> Result<Self> {
         let intents = GatewayIntents::MESSAGE_CONTENT
             | GatewayIntents::DIRECT_MESSAGES
-            | GatewayIntents::GUILD_MESSAGES;
+            | GatewayIntents::GUILD_MESSAGES
+            | GatewayIntents::GUILDS;
         let state = Data::new(AtomicBotStatus::new(BotStatus::Starting));
         let http_config = config.http;
         let client = Client::builder(&config.token, intents)

@@ -1,5 +1,7 @@
 use rust_i18n::t;
-use serenity::all::{ApplicationId, CommandData, CreateCommand, Permissions, CreateBotAuthParameters, Scope};
+use serenity::all::{
+    ApplicationId, CommandData, CreateBotAuthParameters, CreateCommand, Permissions, Scope,
+};
 use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
 use tokio::sync::OnceCell;
 use tracing::debug;
@@ -51,11 +53,15 @@ pub(crate) async fn get_invite_command(client_id: ApplicationId) -> String {
                 | Permissions::EMBED_LINKS
         })
         .await;
-    let scopes = SCOPES.get_or_init(|| async {
-        vec![Scope::Bot, Scope::ApplicationsCommands]
-    }).await;
+    let scopes = SCOPES
+        .get_or_init(|| async { vec![Scope::Bot, Scope::ApplicationsCommands] })
+        .await;
 
-    CreateBotAuthParameters::new().client_id(client_id).permissions(*permissions).scopes(scopes).build()
+    CreateBotAuthParameters::new()
+        .client_id(client_id)
+        .permissions(*permissions)
+        .scopes(scopes)
+        .build()
 }
 
 impl LinkPedantCommands {

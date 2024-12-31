@@ -145,7 +145,7 @@ impl MessageProcessor {
     }
 
     #[instrument(level = "debug", skip(self))]
-    pub fn process_message(&self, msg: &str) -> (String, bool) {
+    pub fn process_message(&self, msg: &str) -> Option<String> {
         let new_msg = self
             .http_url_regex
             .replace_all(msg, |caps: &Captures<'_>| {
@@ -156,8 +156,11 @@ impl MessageProcessor {
                     })
             })
             .to_string();
-        let modified = new_msg.ne(msg);
-        (new_msg, modified)
+        if new_msg.ne(msg) {
+            Some(new_msg)
+        } else {
+            None
+        }
     }
 }
 
@@ -184,9 +187,9 @@ mod test {
         let expected =
             "Test message with a TikTok link ||https://www.vxtiktok.com/t/ZTYXjHYeg/|| in it.";
 
-        let (result, modified) = processor.process_message(message);
-        assert!(modified);
-        assert_eq!(&result, expected);
+        let result = processor.process_message(message);
+        assert!(result.is_some());
+        assert_eq!(&result.unwrap(), expected);
         Ok(())
     }
 
@@ -196,9 +199,9 @@ mod test {
         let message = "Test message with **multiple** (https://www.tiktok.com/t/ZTYX2qUvY/) types of links ||https://youtube.com/shorts/xFnfOdb35FI/|| in it.";
         let expected = "Test message with **multiple** (https://www.vxtiktok.com/t/ZTYX2qUvY/) types of links ||https://youtu.be/xFnfOdb35FI/|| in it.";
 
-        let (result, modified) = processor.process_message(message);
-        assert!(modified);
-        assert_eq!(&result, expected);
+        let result = processor.process_message(message);
+        assert!(result.is_some());
+        assert_eq!(&result.unwrap(), expected);
         Ok(())
     }
 }
