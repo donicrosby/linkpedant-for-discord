@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - master
-      - dev
     tags:
       - 'v*.*.*'
 
@@ -19,7 +18,6 @@ jobs:
   
   build:
     uses: ./.github/workflows/docker.yml
-    if: ${{ github.ref == '/refs/heads/master' }}
     needs: check
     with:
       image: ghcr.io/donicrosby/linkpedant
