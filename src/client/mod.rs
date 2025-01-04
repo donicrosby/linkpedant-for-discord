@@ -95,7 +95,6 @@ impl Handler {
         ctx: &'a Context,
         reaction: Reaction,
     ) -> Result<(&'a Context, Message, DeleteReplyReaction), BotClientErrors> {
-        
         let emoji = self.get_reaction_emoji(ctx).await?;
 
         reaction
@@ -105,7 +104,10 @@ impl Handler {
             .map(|msg| (ctx, msg, emoji))
     }
 
-    async fn get_reaction_emoji(&self, ctx: &Context) -> Result<DeleteReplyReaction, BotClientErrors> {
+    async fn get_reaction_emoji(
+        &self,
+        ctx: &Context,
+    ) -> Result<DeleteReplyReaction, BotClientErrors> {
         let data_read = ctx.data.read().await;
 
         let delete_reply_config_lock = data_read
@@ -250,14 +252,21 @@ impl EventHandler for Handler {
                 .map_err(|err| warn! {%err, "could not parse interaction command"})
                 .unwrap();
             let client_id = ctx.http.application_id().expect("no application id is set");
-            let delete_emoji = self.get_reaction_emoji(&ctx).await.expect("could not get reaction emoji");
+            let delete_emoji = self
+                .get_reaction_emoji(&ctx)
+                .await
+                .expect("could not get reaction emoji");
             command
                 .create_response(
                     ctx,
                     CreateInteractionResponse::Message(
                         CreateInteractionResponseMessage::new()
                             .ephemeral(true)
-                            .content(command_data.run(client_id, delete_emoji.as_ref(), &command.locale).await),
+                            .content(
+                                command_data
+                                    .run(client_id, delete_emoji.as_ref(), &command.locale)
+                                    .await,
+                            ),
                     ),
                 )
                 .await
@@ -288,7 +297,9 @@ impl EventHandler for Handler {
             match err {
                 BotClientErrors::NotMyMessage => debug!("reaction was not on my message"),
                 BotClientErrors::InvalidEmoji => debug!("reaction was not the correct emoji"),
-                BotClientErrors::NotOriginalAuthor => debug!("reaction wasn't from original author"),
+                BotClientErrors::NotOriginalAuthor => {
+                    debug!("reaction wasn't from original author")
+                }
                 err => {
                     warn! {%err, "handling reaction add"}
                 }
