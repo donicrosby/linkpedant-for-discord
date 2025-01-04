@@ -154,7 +154,7 @@ impl Handler {
                         .ok_or(BotClientErrors::NoReply),
                 )
                 .and_then(|ref_msg| async move {
-                    let user_id = ref_msg.author.id.clone();
+                    let user_id = ref_msg.author.id;
                     if ref_msg.author.eq(&reaction_user) {
                         Ok(user_id)
                     } else {
