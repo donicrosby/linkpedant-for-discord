@@ -1,5 +1,11 @@
 use rust_i18n::t;
+<<<<<<< HEAD
 use serenity::all::{ApplicationId, CommandData, CreateCommand, Permissions, CreateBotAuthParameters, Scope};
+=======
+use serenity::all::{
+    ApplicationId, CommandData, CreateBotAuthParameters, CreateCommand, Permissions, Scope,
+};
+>>>>>>> master
 use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
 use tokio::sync::OnceCell;
 use tracing::debug;
@@ -51,15 +57,19 @@ pub(crate) async fn get_invite_command(client_id: ApplicationId) -> String {
                 | Permissions::EMBED_LINKS
         })
         .await;
-    let scopes = SCOPES.get_or_init(|| async {
-        vec![Scope::Bot, Scope::ApplicationsCommands]
-    }).await;
+    let scopes = SCOPES
+        .get_or_init(|| async { vec![Scope::Bot, Scope::ApplicationsCommands] })
+        .await;
 
-    CreateBotAuthParameters::new().client_id(client_id).permissions(*permissions).scopes(scopes).build()
+    CreateBotAuthParameters::new()
+        .client_id(client_id)
+        .permissions(*permissions)
+        .scopes(scopes)
+        .build()
 }
 
 impl LinkPedantCommands {
-    pub async fn run(self, client_id: ApplicationId, locale: &str) -> String {
+    pub async fn run(self, client_id: ApplicationId, delete_emoji: &str, locale: &str) -> String {
         match self {
             Self::Help => {
                 let mut other_cmd_descriptions: Vec<String> = Vec::new();
@@ -74,6 +84,7 @@ impl LinkPedantCommands {
                 let cmd_descriptions = other_cmd_descriptions.join("\n");
                 t!(
                     "help.content",
+                    delete_emoji = delete_emoji,
                     command_descriptions = cmd_descriptions,
                     locale = locale
                 )

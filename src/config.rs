@@ -46,6 +46,27 @@ fn create_default_config(mut config: Config) -> Config {
 
 pub type ReplacerConfig = HashMap<String, LinkReplacerConfig>;
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct DeleteReplyReaction(String);
+
+impl DeleteReplyReaction {
+    pub fn new(str: String) -> Self {
+        Self(str)
+    }
+}
+
+impl AsRef<str> for DeleteReplyReaction {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl Default for DeleteReplyReaction {
+    fn default() -> Self {
+        Self(String::from("❌"))
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct Config {
     pub token: String,
@@ -54,6 +75,8 @@ pub struct Config {
     #[serde(default)]
     pub amazon: AmazonConfig,
     pub reddit_media_regex: Option<String>,
+    #[serde(default)]
+    pub delete_reply_reaction: DeleteReplyReaction,
     pub replacers: ReplacerConfig,
 }
 

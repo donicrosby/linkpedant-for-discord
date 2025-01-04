@@ -8,7 +8,9 @@ use tracing::{error, info, warn};
 
 pub(crate) use client::Handler;
 pub(crate) use commands::{get_invite_command, LinkPedantCommands};
-pub use config::{get_configuration, Config, HttpConfig, LinkReplacerConfig, ReplacerConfig};
+pub use config::{
+    get_configuration, Config, DeleteReplyReaction, HttpConfig, LinkReplacerConfig, ReplacerConfig,
+};
 pub use replace::AmazonConfig;
 pub(crate) use replace::MessageProcessor;
 
@@ -42,6 +44,12 @@ impl TypeMapKey for BotState {
     type Value = Data<AtomicBotStatus>;
 }
 
+pub(crate) struct DeleteReplyReactionConfig;
+
+impl TypeMapKey for DeleteReplyReactionConfig {
+    type Value = Arc<RwLock<DeleteReplyReaction>>;
+}
+
 #[derive(Debug, Error)]
 pub enum LinkPedantError {
     #[error("serenity error")]
@@ -62,7 +70,9 @@ impl LinkPedant {
     pub async fn new(config: Config) -> Result<Self> {
         let intents = GatewayIntents::MESSAGE_CONTENT
             | GatewayIntents::DIRECT_MESSAGES
-            | GatewayIntents::GUILD_MESSAGES;
+            | GatewayIntents::GUILD_MESSAGES
+            | GatewayIntents::GUILDS
+            | GatewayIntents::GUILD_MESSAGE_REACTIONS;
         let state = Data::new(AtomicBotStatus::new(BotStatus::Starting));
         let http_config = config.http;
         let client = Client::builder(&config.token, intents)
@@ -79,6 +89,9 @@ impl LinkPedant {
                 config.reddit_media_regex.to_owned(),
                 &config.amazon,
             ))));
+            data.insert::<DeleteReplyReactionConfig>(Arc::new(RwLock::new(
+                config.delete_reply_reaction.clone(),
+            )));
             data.insert::<BotState>(state.clone());
         }
         Ok(Self {
