@@ -1,11 +1,7 @@
 use rust_i18n::t;
-<<<<<<< HEAD
-use serenity::all::{ApplicationId, CommandData, CreateCommand, Permissions, CreateBotAuthParameters, Scope};
-=======
 use serenity::all::{
     ApplicationId, CommandData, CreateBotAuthParameters, CreateCommand, Permissions, Scope,
 };
->>>>>>> master
 use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
 use tokio::sync::OnceCell;
 use tracing::debug;
