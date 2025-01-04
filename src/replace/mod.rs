@@ -170,12 +170,10 @@ impl MessageProcessor {
             .to_string();
         if let Some(process_err) = process_error {
             Err(process_err)
+        } else if could_modify {
+            Ok(Some(new_msg))
         } else {
-            if could_modify {
-                Ok(Some(new_msg))
-            } else {
-                Ok(None)
-            }
+            Ok(None)
         }
     }
 }
