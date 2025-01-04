@@ -1,4 +1,7 @@
-use super::{LinkProcessor, LinkReplacer, LinkReplacerConfig, ReplaceResult};
+use super::{
+    LinkProcessor, LinkReplacer, LinkReplacerConfig, ProcessorConfig, ReplaceConfigError,
+    ReplaceConfigResult, ReplaceResult,
+};
 use fancy_regex::Regex;
 use tracing::{debug, instrument};
 
@@ -7,18 +10,31 @@ pub struct BskyReplacer {
     inner: LinkProcessor,
 }
 
+const BSKY_NEW_DOMAIN: &str = "bskyx.app";
 const BSKY_LINK_RE_STR: &str =
     r"https?://bsky\.app/profile/((\w|\.|-)+|(did:plc:[234567a-z]{24}))/post/[234567a-z]{13}(?!/)";
 const BSKY_DOMAIN_RE_STR: &str = r"bsky\.app";
 
+pub fn bsky_default_new_domain() -> String {
+    BSKY_NEW_DOMAIN.to_owned()
+}
+
+pub fn bsky_default_link_re_str() -> &'static str {
+    BSKY_LINK_RE_STR
+}
+
+pub fn bsky_default_domain_re_str() -> &'static str {
+    BSKY_DOMAIN_RE_STR
+}
+
+pub fn bsky_default_strip_query() -> bool {
+    true
+}
+
 impl BskyReplacer {
-    pub fn new(config: &LinkReplacerConfig) -> ReplaceResult<Self> {
-        let new_domain = &config.new_domain;
-        let regex_str = config.regex.as_deref().unwrap_or(BSKY_LINK_RE_STR);
-        let domain_re_str = config.domain_re.as_deref().unwrap_or(BSKY_DOMAIN_RE_STR);
-        let strip_query = config.strip_query.unwrap_or(true);
-        let inner = LinkProcessor::new(new_domain, regex_str, domain_re_str, strip_query)?;
-        Ok(Self { inner })
+    pub fn new(config: BskyConfig) -> Self {
+        let inner = LinkProcessor::new(config.into());
+        Self { inner }
     }
 }
 
@@ -34,25 +50,72 @@ impl LinkReplacer for BskyReplacer {
     }
 }
 
+pub struct BskyConfig {
+    inner: ProcessorConfig,
+}
+
+impl BskyConfig {
+    pub fn new(
+        new_domain: String,
+        regex: &str,
+        domain_regex: &str,
+        strip_query: bool,
+    ) -> ReplaceConfigResult<Self> {
+        let config = ProcessorConfig::new(new_domain, regex, domain_regex, strip_query)?;
+        Ok(Self { inner: config })
+    }
+}
+
+impl From<BskyConfig> for ProcessorConfig {
+    fn from(value: BskyConfig) -> Self {
+        value.inner
+    }
+}
+
+impl TryFrom<&LinkReplacerConfig> for BskyConfig {
+    type Error = ReplaceConfigError;
+    fn try_from(value: &LinkReplacerConfig) -> Result<Self, Self::Error> {
+        Self::new(
+            value
+                .new_domain
+                .clone()
+                .unwrap_or(bsky_default_new_domain()),
+            value.regex.as_deref().unwrap_or(bsky_default_link_re_str()),
+            value
+                .domain_re
+                .as_deref()
+                .unwrap_or(bsky_default_domain_re_str()),
+            value.strip_query.unwrap_or(bsky_default_strip_query()),
+        )
+    }
+}
+
+impl Default for BskyConfig {
+    fn default() -> Self {
+        Self::new(
+            bsky_default_new_domain(),
+            bsky_default_link_re_str(),
+            bsky_default_domain_re_str(),
+            bsky_default_strip_query(),
+        )
+        .unwrap()
+    }
+}
+
 #[cfg(test)]
 mod test {
 
     use super::*;
     use crate::init_tests;
 
-    fn create_test_replacer() -> ReplaceResult<BskyReplacer> {
-        BskyReplacer::new(&LinkReplacerConfig {
-            new_domain: "bskyx.app".into(),
-            domain_re: None,
-            regex: None,
-            strip_query: None,
-        })
+    fn create_test_replacer() -> BskyReplacer {
+        BskyReplacer::new(BskyConfig::default())
     }
 
     #[tokio::test]
     async fn test_transform_url() -> ReplaceResult<()> {
         init_tests().await;
-        let test_replacer = create_test_replacer()?;
+        let test_replacer = create_test_replacer();
         let url = "https://bsky.app/profile/albertflasher.bsky.social/post/3ldpen4om622h";
         let expected = "https://bskyx.app/profile/albertflasher.bsky.social/post/3ldpen4om622h";
 

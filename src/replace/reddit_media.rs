@@ -1,4 +1,4 @@
-use super::{LinkReplacer, ReplaceError, ReplaceResult};
+use super::{LinkReplacer, ReplaceConfigResult, ReplaceError, ReplaceResult};
 use fancy_regex::Regex;
 use tracing::{debug, instrument};
 use url::Url;
@@ -14,7 +14,7 @@ const REDDIT_MEDIA_LINK_RE_STR: &str = r"https?://(\w+\.)?reddit\.com/media[^\s]
 const FIXABLE_TYPES: &[&str] = &[".jpeg", ".jpg", ".png", ".gif", ".webp"];
 
 impl RedditMediaReplacer {
-    pub fn new(media_re_str: Option<String>) -> ReplaceResult<Self> {
+    pub fn new(media_re_str: Option<String>) -> ReplaceConfigResult<Self> {
         let regex_str = media_re_str.unwrap_or(REDDIT_MEDIA_LINK_RE_STR.to_string());
         let regex = Regex::new(&regex_str)?;
         Ok(Self { regex })
@@ -59,7 +59,7 @@ mod test {
     use super::*;
     use crate::init_tests;
 
-    fn create_test_replacer() -> ReplaceResult<RedditMediaReplacer> {
+    fn create_test_replacer() -> ReplaceConfigResult<RedditMediaReplacer> {
         RedditMediaReplacer::new(None)
     }
 

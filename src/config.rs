@@ -3,6 +3,8 @@ use once_cell::sync::Lazy;
 use serde::Deserialize;
 use std::collections::HashMap;
 
+use crate::AmazonConfig;
+
 pub fn get_configuration() -> Result<Config, ConfigError> {
     let config = config::Config::builder()
         .add_source(config::File::with_name("config"))
@@ -17,15 +19,16 @@ pub fn get_configuration() -> Result<Config, ConfigError> {
         .map(create_default_config)
 }
 
-static DEFAULT_MAPPINGS: Lazy<HashMap<String, String>> = Lazy::new(|| {
-    let mut default_mappings = HashMap::new();
-    default_mappings.insert("instagram".into(), "ddinstagram.com".into());
-    default_mappings.insert("pixiv".into(), "phixiv.net".into());
-    default_mappings.insert("reddit".into(), "vxreddit.com".into());
-    default_mappings.insert("tiktok".into(), "vxtiktok.com".into());
-    default_mappings.insert("twitter".into(), "fxtwitter.com".into());
-    default_mappings.insert("youtube".into(), "youtu.be".into());
-    default_mappings.insert("bsky".into(), "bskyx.app".into());
+static DEFAULT_MAPPINGS: Lazy<Vec<&'static str>> = Lazy::new(|| {
+    let default_mappings = vec![
+        "instagram",
+        "pixiv",
+        "reddit",
+        "tiktok",
+        "twitter",
+        "youtube",
+        "bsky",
+    ];
 
     default_mappings
 });
@@ -33,40 +36,68 @@ static DEFAULT_MAPPINGS: Lazy<HashMap<String, String>> = Lazy::new(|| {
 fn create_default_config(mut config: Config) -> Config {
     let replacer_config = &mut config.replacers;
     let defaults = Lazy::force(&DEFAULT_MAPPINGS);
-    for (replacer_type, replace_domain) in defaults.iter() {
+    for replacer_type in defaults.iter() {
         replacer_config
             .entry(replacer_type.to_string())
-            .or_insert_with(|| LinkReplacerConfig::new(replace_domain.to_string()));
+            .or_default();
     }
     config
 }
 
 pub type ReplacerConfig = HashMap<String, LinkReplacerConfig>;
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct DeleteReplyReaction(String);
+
+impl DeleteReplyReaction {
+    pub fn new(str: String) -> Self {
+        Self(str)
+    }
+}
+
+impl AsRef<str> for DeleteReplyReaction {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl Default for DeleteReplyReaction {
+    fn default() -> Self {
+        Self(String::from("❌"))
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct Config {
     pub token: String,
     #[serde(default)]
     pub http: HttpConfig,
+    #[serde(default)]
+    pub amazon: AmazonConfig,
     pub reddit_media_regex: Option<String>,
+    #[serde(default)]
+    pub delete_reply_reaction: DeleteReplyReaction,
     pub replacers: ReplacerConfig,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 pub struct LinkReplacerConfig {
-    pub new_domain: String,
+    pub new_domain: Option<String>,
     pub regex: Option<String>,
     pub domain_re: Option<String>,
     pub strip_query: Option<bool>,
+    #[serde(flatten)]
+    pub custom_config: HashMap<String, String>,
 }
 
 impl LinkReplacerConfig {
     pub fn new(new_domain: String) -> Self {
         Self {
-            new_domain,
+            new_domain: Some(new_domain),
             regex: None,
             domain_re: None,
             strip_query: None,
+            custom_config: HashMap::new(),
         }
     }
 

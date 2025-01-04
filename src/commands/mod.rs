@@ -1,10 +1,13 @@
 use rust_i18n::t;
-use serenity::all::{ApplicationId, CommandData, CreateCommand, Permissions};
+use serenity::all::{
+    ApplicationId, CommandData, CreateBotAuthParameters, CreateCommand, Permissions, Scope,
+};
 use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
 use tokio::sync::OnceCell;
 use tracing::debug;
 
 static PERMISSIONS: OnceCell<Permissions> = OnceCell::const_new();
+static SCOPES: OnceCell<Vec<Scope>> = OnceCell::const_new();
 
 #[derive(Debug, EnumIter, EnumString, Display, PartialEq)]
 #[strum(serialize_all = "lowercase")]
@@ -49,13 +52,20 @@ pub(crate) async fn get_invite_command(client_id: ApplicationId) -> String {
                 | Permissions::MANAGE_MESSAGES
                 | Permissions::EMBED_LINKS
         })
-        .await
-        .bits();
-    format!("https://discord.com/oauth2/authorize?client_id={client_id}&scope=bot%20applications.commands&permissions={permissions}")
+        .await;
+    let scopes = SCOPES
+        .get_or_init(|| async { vec![Scope::Bot, Scope::ApplicationsCommands] })
+        .await;
+
+    CreateBotAuthParameters::new()
+        .client_id(client_id)
+        .permissions(*permissions)
+        .scopes(scopes)
+        .build()
 }
 
 impl LinkPedantCommands {
-    pub async fn run(self, client_id: ApplicationId, locale: &str) -> String {
+    pub async fn run(self, client_id: ApplicationId, delete_emoji: &str, locale: &str) -> String {
         match self {
             Self::Help => {
                 let mut other_cmd_descriptions: Vec<String> = Vec::new();
@@ -70,6 +80,7 @@ impl LinkPedantCommands {
                 let cmd_descriptions = other_cmd_descriptions.join("\n");
                 t!(
                     "help.content",
+                    delete_emoji = delete_emoji,
                     command_descriptions = cmd_descriptions,
                     locale = locale
                 )

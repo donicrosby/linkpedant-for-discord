@@ -1,4 +1,7 @@
-use super::{LinkProcessor, LinkReplacer, LinkReplacerConfig, ReplaceResult};
+use super::{
+    LinkProcessor, LinkReplacer, LinkReplacerConfig, ProcessorConfig, ReplaceConfigError,
+    ReplaceConfigResult, ReplaceResult,
+};
 use fancy_regex::Regex;
 use tracing::{debug, instrument};
 
@@ -7,17 +10,30 @@ pub struct TikTokReplacer {
     inner: LinkProcessor,
 }
 
+const TIKTOK_NEW_DOMAIN: &str = "vxtiktok.com";
 const TIKTOK_LINK_RE_STR: &str = r"https?://(\w+\.)?tiktok\.com/((t/)?\w+|@[^\s]+/video)";
 const TIKTOK_DOMAIN_RE_STR: &str = r"tiktok\.com";
 
+pub fn tiktok_default_new_domain() -> String {
+    TIKTOK_NEW_DOMAIN.to_owned()
+}
+
+pub fn tiktok_default_link_re_str() -> &'static str {
+    TIKTOK_LINK_RE_STR
+}
+
+pub fn tiktok_default_domain_re_str() -> &'static str {
+    TIKTOK_DOMAIN_RE_STR
+}
+
+pub fn tiktok_default_strip_query() -> bool {
+    true
+}
+
 impl TikTokReplacer {
-    pub fn new(config: &LinkReplacerConfig) -> ReplaceResult<Self> {
-        let new_domain = &config.new_domain;
-        let regex_str = config.regex.as_deref().unwrap_or(TIKTOK_LINK_RE_STR);
-        let domain_re_str = config.domain_re.as_deref().unwrap_or(TIKTOK_DOMAIN_RE_STR);
-        let strip_query = config.strip_query.unwrap_or(true);
-        let inner = LinkProcessor::new(new_domain, regex_str, domain_re_str, strip_query)?;
-        Ok(Self { inner })
+    pub fn new(config: TikTokConfig) -> Self {
+        let inner = LinkProcessor::new(config.into());
+        Self { inner }
     }
 }
 
@@ -33,25 +49,81 @@ impl LinkReplacer for TikTokReplacer {
     }
 }
 
+pub struct TikTokConfig {
+    inner: ProcessorConfig,
+}
+
+impl TikTokConfig {
+    pub fn new(
+        new_domain: String,
+        regex: &str,
+        domain_regex: &str,
+        strip_query: bool,
+    ) -> ReplaceConfigResult<Self> {
+        let config = ProcessorConfig::new(new_domain, regex, domain_regex, strip_query)?;
+        Ok(Self { inner: config })
+    }
+}
+
+impl From<TikTokConfig> for ProcessorConfig {
+    fn from(value: TikTokConfig) -> Self {
+        value.inner
+    }
+}
+
+impl TryFrom<&LinkReplacerConfig> for TikTokConfig {
+    type Error = ReplaceConfigError;
+    fn try_from(value: &LinkReplacerConfig) -> Result<Self, Self::Error> {
+        Self::new(
+            value
+                .new_domain
+                .clone()
+                .unwrap_or(tiktok_default_new_domain()),
+            value
+                .regex
+                .as_deref()
+                .unwrap_or(tiktok_default_link_re_str()),
+            value
+                .domain_re
+                .as_deref()
+                .unwrap_or(tiktok_default_domain_re_str()),
+            value.strip_query.unwrap_or(tiktok_default_strip_query()),
+        )
+    }
+}
+
+impl Default for TikTokConfig {
+    fn default() -> Self {
+        Self::new(
+            tiktok_default_new_domain(),
+            tiktok_default_link_re_str(),
+            tiktok_default_domain_re_str(),
+            tiktok_default_strip_query(),
+        )
+        .unwrap()
+    }
+}
+
+impl AsRef<ProcessorConfig> for TikTokConfig {
+    fn as_ref(&self) -> &ProcessorConfig {
+        &self.inner
+    }
+}
+
 #[cfg(test)]
 mod test {
 
     use super::*;
     use crate::init_tests;
 
-    fn create_test_replacer() -> ReplaceResult<TikTokReplacer> {
-        TikTokReplacer::new(&LinkReplacerConfig {
-            new_domain: "vxtiktok.com".into(),
-            domain_re: None,
-            regex: None,
-            strip_query: None,
-        })
+    fn create_test_replacer() -> TikTokReplacer {
+        TikTokReplacer::new(TikTokConfig::default())
     }
 
     #[tokio::test]
     async fn test_transform_url() -> ReplaceResult<()> {
         init_tests().await;
-        let test_replacer = create_test_replacer()?;
+        let test_replacer = create_test_replacer();
         let url = "https://www.tiktok.com/t/ZTYXjHYeg/";
         let expected = "https://www.vxtiktok.com/t/ZTYXjHYeg/";
 
