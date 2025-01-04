@@ -1,6 +1,6 @@
 use crate::{
-    get_invite_command, BotState, DeleteReplyReaction, DeleteReplyReactionConfig,
-    LinkPedantCommands, MessageHandler,
+    get_invite_command, replace::ReplaceError, BotState, DeleteReplyReaction,
+    DeleteReplyReactionConfig, LinkPedantCommands, MessageHandler,
 };
 use serenity::all::{EditMessage, ErrorResponse, Permissions, Reaction, Ready, StatusCode};
 use serenity::async_trait;
@@ -46,7 +46,9 @@ enum BotClientErrors {
     NoReply,
     #[error("not original author")]
     NotOriginalAuthor,
-    #[error("serenity error: {0}")]
+    #[error("processing error `{0}`")]
+    ProcessError(#[from] ReplaceError),
+    #[error("serenity error: `{0}`")]
     Serenity(#[from] SerenityError),
 }
 
@@ -185,7 +187,7 @@ impl Handler {
         let processor = msg_processor_lock.read().await;
 
         processor
-            .process_message(&message.content)
+            .process_message(&message.content)?
             .ok_or(BotClientErrors::NotModified)
             .map(|reply| (ctx, message, reply))
     }
@@ -283,10 +285,12 @@ impl EventHandler for Handler {
         }
 
         if let Err(err) = self.message_handler(ctx, message).await {
-            if let BotClientErrors::InsufficientPermissions(NeededPermissions::SendMessage) = err {
-                info!("cannot reply to message, ignoring...");
-            } else {
-                warn! {%err, "processing message"};
+            match err {
+                BotClientErrors::InsufficientPermissions(NeededPermissions::SendMessage) => {
+                    info!("cannot reply to message, ignoring...")
+                }
+                BotClientErrors::NotModified => debug!("message wasn't able to be modified"),
+                err => warn! {%err, "processing message"},
             }
         }
     }

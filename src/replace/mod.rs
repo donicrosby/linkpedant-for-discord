@@ -145,27 +145,44 @@ impl MessageProcessor {
     }
 
     #[instrument(level = "debug", skip(self))]
-    pub fn process_message(&self, msg: &str) -> Option<String> {
+    pub fn process_message(&self, msg: &str) -> ReplaceResult<Option<String>> {
+        let mut could_modify = false;
+        let mut process_error = None;
         let new_msg = self
             .http_url_regex
             .replace_all(msg, |caps: &Captures<'_>| {
                 self.url_processors
                     .iter()
                     .fold(caps[0].to_string(), |acc, processor| {
-                        processor.process_url(&acc)
+                        match processor.process_url(&acc) {
+                            Ok(Some(new_url)) => {
+                                could_modify = true;
+                                new_url
+                            }
+                            Ok(None) => acc,
+                            Err(err) => {
+                                process_error = Some(err);
+                                acc
+                            }
+                        }
                     })
             })
             .to_string();
-        if new_msg.ne(msg) {
-            Some(new_msg)
+        if let Some(process_err) = process_error {
+            Err(process_err)
         } else {
-            None
+            if could_modify {
+                Ok(Some(new_msg))
+            } else {
+                Ok(None)
+            }
         }
     }
 }
 
 #[cfg(test)]
 mod test {
+
     use super::*;
 
     fn create_processor() -> ReplaceResult<MessageProcessor> {
@@ -188,6 +205,8 @@ mod test {
             "Test message with a TikTok link ||https://www.vxtiktok.com/t/ZTYXjHYeg/|| in it.";
 
         let result = processor.process_message(message);
+        assert!(result.is_ok());
+        let result = result.unwrap();
         assert!(result.is_some());
         assert_eq!(&result.unwrap(), expected);
         Ok(())
@@ -200,8 +219,22 @@ mod test {
         let expected = "Test message with **multiple** (https://www.vxtiktok.com/t/ZTYX2qUvY/) types of links ||https://youtu.be/xFnfOdb35FI/|| in it.";
 
         let result = processor.process_message(message);
+        assert!(result.is_ok());
+        let result = result.unwrap();
         assert!(result.is_some());
         assert_eq!(&result.unwrap(), expected);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_unknown_link_types() -> ReplaceResult<()> {
+        let processor = create_processor()?;
+        let message = "Test message with [unknown link](https://example.com/v/Fsd6ZMcG0XN6OmOK) does not result in an error";
+
+        let result = processor.process_message(message);
+        assert!(result.is_ok());
+        let result: Option<String> = result.unwrap();
+        assert!(result.is_none());
         Ok(())
     }
 }
