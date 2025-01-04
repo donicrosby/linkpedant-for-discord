@@ -4,7 +4,7 @@ use thiserror::Error;
 use tracing::{debug, info, instrument, warn};
 use url::Url;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Clone)]
 pub enum ReplaceError {
     #[error("url error")]
     Url(#[from] url::ParseError),
@@ -28,7 +28,7 @@ pub enum ReplaceError {
     Config(#[from] ReplaceConfigError),
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Clone)]
 pub enum ReplaceConfigError {
     #[error("regex error")]
     Regex(#[from] fancy_regex::Error),
@@ -110,25 +110,40 @@ pub trait LinkReplacer: Debug {
     fn get_regex(&self) -> &Regex;
 
     #[instrument(skip(self))]
-    fn process_url(&self, url: &str) -> String {
+    fn process_url(&self, url: &str) -> ReplaceResult<Option<String>> {
         let re = self.get_regex();
+        let mut can_process = false;
+        let mut process_error = None;
         debug!("Checking if can process URL...");
-        re.replace(url, |caps: &Captures<'_>| {
-            debug!("Can process URL, adjusting it now...");
-            let orig_url = &caps[0];
-            self.transform_url(orig_url)
-                .and_then(|new_url| {
-                    if new_url.eq(orig_url) {
-                        Err(ReplaceError::UrlNotModified(new_url))
-                    } else {
-                        info! {%orig_url, %new_url, "replaced url"};
-                        Ok(new_url)
-                    }
-                })
-                .map_err(|err| warn! {%err, "could not transform url"})
-                .unwrap_or(orig_url.to_string())
-        })
-        .to_string()
+        let new_str = re
+            .replace(url, |caps: &Captures<'_>| {
+                debug!("Can process URL, adjusting it now...");
+                can_process = true;
+                let orig_url = &caps[0];
+                self.transform_url(orig_url)
+                    .and_then(|new_url| {
+                        if new_url.eq(orig_url) {
+                            let err = ReplaceError::UrlNotModified(new_url);
+                            process_error = Some(err.clone());
+                            Err(err)
+                        } else {
+                            info! {%orig_url, %new_url, "replaced url"};
+                            Ok(new_url)
+                        }
+                    })
+                    .map_err(|err| warn! {%err, "could not transform url"})
+                    .unwrap_or(orig_url.to_string())
+            })
+            .to_string();
+        if can_process {
+            if let Some(err) = process_error {
+                Err(err)
+            } else {
+                Ok(Some(new_str))
+            }
+        } else {
+            Ok(None)
+        }
     }
 
     fn transform_url(&self, url: &str) -> ReplaceResult<String>;
