@@ -5,7 +5,7 @@ pub(crate) use base::{
     LinkProcessor, LinkReplacer, ProcessorConfig, ReplaceConfigError, ReplaceConfigResult,
     ReplaceError, ReplaceResult,
 };
-use fancy_regex::{Captures, Regex};
+use fancy_regex::{Captures, Regex, Replacer};
 use strum::EnumString;
 use tracing::{info, instrument, warn};
 
@@ -67,6 +67,49 @@ impl ReplacerType {
             Self::Youtube => Box::new(YoutubeReplacer::new(config.try_into()?)),
         };
         Ok(replacer)
+    }
+}
+
+#[derive(Debug, Clone)]
+struct MessageReplacer<'a, T> {
+    replacers: &'a [BoxedLinkReplacer],
+    error: Option<T>,
+}
+
+impl<'a> MessageReplacer<'a, ReplaceError>
+{
+    pub fn new(replacers: &'a [BoxedLinkReplacer]) -> Self {
+        Self {
+            replacers,
+            error: None,
+        }
+    }
+
+    fn replace_append_impl(&mut self, caps: &Captures<'_>) -> ReplaceResult<String> {
+        let url = caps[0].to_string();
+        for replacer in self.replacers {
+            if replacer.is_match(&url)? {
+                return replacer.process_url(&url);
+            }
+        }
+        Ok(url)
+    }
+
+    pub fn error(&self) -> Option<ReplaceError> {
+        self.error.clone()
+    }
+}
+
+impl Replacer for MessageReplacer<'_, ReplaceError> {
+    fn replace_append(&mut self, caps: &Captures<'_>, dst: &mut String) {
+        let rep = match self.replace_append_impl(caps) {
+            Ok(rep) => rep,
+            Err(err) => {
+                self.error = Some(err);
+                caps[0].to_string()
+            }
+        };
+        dst.push_str(&rep);
     }
 }
 
@@ -146,34 +189,17 @@ impl MessageProcessor {
 
     #[instrument(level = "debug", skip(self))]
     pub fn process_message(&self, msg: &str) -> ReplaceResult<Option<String>> {
-        let mut could_modify = false;
-        let mut process_error = None;
+        let mut message_replacer = MessageReplacer::new(&self.url_processors);
         let new_msg = self
             .http_url_regex
-            .replace_all(msg, |caps: &Captures<'_>| {
-                self.url_processors
-                    .iter()
-                    .fold(caps[0].to_string(), |acc, processor| {
-                        match processor.process_url(&acc) {
-                            Ok(Some(new_url)) => {
-                                could_modify = true;
-                                new_url
-                            }
-                            Ok(None) => acc,
-                            Err(err) => {
-                                process_error = Some(err);
-                                acc
-                            }
-                        }
-                    })
-            })
+            .replace_all(msg, message_replacer.by_ref())
             .to_string();
-        if let Some(process_err) = process_error {
+        if let Some(process_err) = message_replacer.error() {
             Err(process_err)
-        } else if could_modify {
-            Ok(Some(new_msg))
-        } else {
+        } else if msg == new_msg{
             Ok(None)
+        } else {
+            Ok(Some(new_msg))
         }
     }
 }
@@ -231,7 +257,7 @@ mod test {
 
         let result = processor.process_message(message);
         assert!(result.is_ok());
-        let result: Option<String> = result.unwrap();
+        let result = result.unwrap();
         assert!(result.is_none());
         Ok(())
     }
