@@ -76,8 +76,7 @@ struct MessageReplacer<'a, T> {
     error: Option<T>,
 }
 
-impl<'a> MessageReplacer<'a, ReplaceError>
-{
+impl<'a> MessageReplacer<'a, ReplaceError> {
     pub fn new(replacers: &'a [BoxedLinkReplacer]) -> Self {
         Self {
             replacers,
@@ -196,7 +195,7 @@ impl MessageProcessor {
             .to_string();
         if let Some(process_err) = message_replacer.error() {
             Err(process_err)
-        } else if msg == new_msg{
+        } else if msg == new_msg {
             Ok(None)
         } else {
             Ok(Some(new_msg))
