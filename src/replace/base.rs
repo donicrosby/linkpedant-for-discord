@@ -109,40 +109,39 @@ impl LinkReplacer for LinkProcessor {
 pub trait LinkReplacer: Debug {
     fn get_regex(&self) -> &Regex;
 
+    fn is_match(&self, url: &str) -> ReplaceResult<bool> {
+        self.get_regex()
+            .is_match(url)
+            .map_err(|err| ReplaceError::Config(err.into()))
+    }
+
     #[instrument(skip(self))]
-    fn process_url(&self, url: &str) -> ReplaceResult<Option<String>> {
+    fn process_url(&self, url: &str) -> ReplaceResult<String> {
         let re = self.get_regex();
-        let mut can_process = false;
         let mut process_error = None;
-        debug!("Checking if can process URL...");
-        let new_str = re
+        debug!("Processing URL...");
+        let new_url = re
             .replace(url, |caps: &Captures<'_>| {
-                debug!("Can process URL, adjusting it now...");
-                can_process = true;
                 let orig_url = &caps[0];
                 self.transform_url(orig_url)
-                    .and_then(|new_url| {
-                        if new_url.eq(orig_url) {
-                            let err = ReplaceError::UrlNotModified(new_url);
+                    .and_then(|processed_url| {
+                        if processed_url.eq(orig_url) {
+                            let err = ReplaceError::UrlNotModified(processed_url);
                             process_error = Some(err.clone());
                             Err(err)
                         } else {
-                            info! {%orig_url, %new_url, "replaced url"};
-                            Ok(new_url)
+                            info! {%orig_url, %processed_url, "replaced url"};
+                            Ok(processed_url)
                         }
                     })
                     .map_err(|err| warn! {%err, "could not transform url"})
                     .unwrap_or(orig_url.to_string())
             })
             .to_string();
-        if can_process {
-            if let Some(err) = process_error {
-                Err(err)
-            } else {
-                Ok(Some(new_str))
-            }
+        if let Some(err) = process_error {
+            Err(err)
         } else {
-            Ok(None)
+            Ok(new_url)
         }
     }
 
