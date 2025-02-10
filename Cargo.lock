@@ -1579,7 +1579,7 @@ checksum = "64804cc6a5042d4f05379909ba25b503ec04e2c082151d62122d5dcaa274b961"
 
 [[package]]
 name = "linkpedant-for-discord"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "actix-web",
  "atomic_enum",
