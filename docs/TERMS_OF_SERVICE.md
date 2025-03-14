@@ -37,7 +37,7 @@ We may update these Terms from time to time. Changes will be posted with the upd
 
 ## 8. Governing Law
 
-These Terms are governed by the laws of [Your Jurisdiction], and any disputes will be resolved in accordance with those laws.
+These Terms are governed by the laws of the United States of America, and any disputes will be resolved in accordance with those laws.
 
 ## 9. Contact Us
 
