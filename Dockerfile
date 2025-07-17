@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM rust:1.85.0 AS chef
+FROM --platform=$BUILDPLATFORM rust:1.88.0 AS chef
 # cargo-chef for improved docker caching
 RUN cargo install cargo-chef
 # Install all of the needed compilation tools for the ARM builds
