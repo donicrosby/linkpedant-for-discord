@@ -212,7 +212,7 @@ mod test {
         let mut config = ReplacerConfig::new();
         config.insert(
             "tiktok".into(),
-            LinkReplacerConfig::new("vxtiktok.com".into()),
+            LinkReplacerConfig::new("d.tnktok.com".into()),
         );
         config.insert("youtube".into(), LinkReplacerConfig::new("youtu.be".into()));
         let processor = MessageProcessor::new(&config, None, &AmazonConfig::default());
@@ -225,7 +225,7 @@ mod test {
         let message =
             "Test message with a TikTok link ||https://www.tiktok.com/t/ZTYXjHYeg/|| in it.";
         let expected =
-            "Test message with a TikTok link ||https://www.vxtiktok.com/t/ZTYXjHYeg/|| in it.";
+            "Test message with a TikTok link ||https://d.tnktok.com/t/ZTYXjHYeg/|| in it.";
 
         let result = processor.process_message(message);
         assert!(result.is_ok());
@@ -239,7 +239,7 @@ mod test {
     async fn test_multiple_message_replace() -> ReplaceResult<()> {
         let processor = create_processor()?;
         let message = "Test message with **multiple** (https://www.tiktok.com/t/ZTYX2qUvY/) types of links ||https://youtube.com/shorts/xFnfOdb35FI/|| in it.";
-        let expected = "Test message with **multiple** (https://www.vxtiktok.com/t/ZTYX2qUvY/) types of links ||https://youtu.be/xFnfOdb35FI/|| in it.";
+        let expected = "Test message with **multiple** (https://d.tnktok.com/t/ZTYX2qUvY/) types of links ||https://youtu.be/xFnfOdb35FI/|| in it.";
 
         let result = processor.process_message(message);
         assert!(result.is_ok());

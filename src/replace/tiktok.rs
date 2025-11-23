@@ -10,9 +10,9 @@ pub struct TikTokReplacer {
     inner: LinkProcessor,
 }
 
-const TIKTOK_NEW_DOMAIN: &str = "vxtiktok.com";
+const TIKTOK_NEW_DOMAIN: &str = "d.tnktok.com";
 const TIKTOK_LINK_RE_STR: &str = r"https?://(\w+\.)?tiktok\.com/((t/)?\w+|@[^\s]+/video)";
-const TIKTOK_DOMAIN_RE_STR: &str = r"tiktok\.com";
+const TIKTOK_DOMAIN_RE_STR: &str = r"([w]{3}\.)?tiktok\.com";
 
 pub fn tiktok_default_new_domain() -> String {
     TIKTOK_NEW_DOMAIN.to_owned()
@@ -125,7 +125,7 @@ mod test {
         init_tests().await;
         let test_replacer = create_test_replacer();
         let url = "https://www.tiktok.com/t/ZTYXjHYeg/";
-        let expected = "https://www.vxtiktok.com/t/ZTYXjHYeg/";
+        let expected = "https://d.tnktok.com/t/ZTYXjHYeg/";
 
         let result = test_replacer.transform_url(&url)?;
         assert_eq!(expected, result);

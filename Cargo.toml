@@ -2,6 +2,7 @@
 name = "linkpedant-for-discord"
 version = "0.4.6"
 edition = "2021"
+license = "AGPL-3.0-only"
 
 [lib]
 name = "linkpedant"
@@ -21,7 +22,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 rust-i18n = "3"
 serde = { version = "1", features = ["derive"]}
-fancy-regex = "0.15"
+fancy-regex = "0.16"
 url = "2"
 urlencoding = "2"
 strum = { version = "0.27", features = ["derive"] }
