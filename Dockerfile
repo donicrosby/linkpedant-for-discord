@@ -42,7 +42,7 @@ RUN cargo build --release --target "$(cat /rust_target.txt)"
 # Copy out the final bin somewhere we can reach it
 RUN cp "target/$(cat /rust_target.txt)/release/linkpedant" .
 
-FROM debian:12.11 AS release
+FROM debian:13.1 AS release
 # Need curl for health check
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
